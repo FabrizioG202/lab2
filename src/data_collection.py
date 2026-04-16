@@ -221,7 +221,7 @@ class DataCollector:
         """
         with tempfile.NamedTemporaryFile(
             "w",
-            delete=False,
+            delete=True,
             encoding="utf8",
             dir=".data",
         ) as tmp_fasta:
@@ -263,14 +263,24 @@ class DataCollector:
 
         return df
 
-    # Setup the data cache directory.
     def setup_wd(self: Self) -> None:
-
+        """
+        Setup the working directory for the project by creating the .data and .imgs directories if they do not exist.
+        """
         if not os.path.exists(".data"):
             os.makedirs(".data")
 
         if not os.path.exists(".imgs"):
             os.makedirs(".imgs")
+
+    def clean_cache(self: Self) -> None:
+        """
+        Clean the data cache directory by removing all files in it.
+        """
+        for file in os.listdir(".data"):
+            file_path = os.path.join(".data", file)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
 
     def save_dataset(
         dataframe: pl.DataFrame,
