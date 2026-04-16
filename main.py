@@ -34,5 +34,14 @@ collector = DataCollector(
     """,
 )
 
+
+# Setup the working director for the project
+# (creates .data, and .imgs)
+collector.setup_wd()
+
+
+# Get the positive examples and cluster them
 positive = collector.cluster_df(collector.get_positive_examples())
+
+# Get the negative examples and cluster them
 negative = collector.cluster_df(collector.get_negative_examples())

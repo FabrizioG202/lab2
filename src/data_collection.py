@@ -264,10 +264,13 @@ class DataCollector:
         return df
 
     # Setup the data cache directory.
-    def setup_wd() -> None:
+    def setup_wd(self: Self) -> None:
 
         if not os.path.exists(".data"):
             os.makedirs(".data")
+
+        if not os.path.exists(".imgs"):
+            os.makedirs(".imgs")
 
     def save_dataset(
         dataframe: pl.DataFrame,

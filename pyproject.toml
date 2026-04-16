@@ -8,4 +8,6 @@ dependencies = [
     "numpy>=2.4.4",
     "polars>=1.39.3",
     "requests>=2.33.1",
+    "scikit-learn>=1.8.0",
+    "tqdm>=4.67.3",
 ]
