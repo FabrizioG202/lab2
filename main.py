@@ -1,8 +1,11 @@
 import re
 
+import logomaker
+import numpy as np
 import polars as pl
 
 from src.data_collection import DataCollector
+from src.logo_generator import generate_logo
 from src.utils import AdditionalProtParamData
 
 collector = DataCollector(
@@ -44,10 +47,13 @@ collector.setup_wd()
 
 
 # Get the positive examples and cluster them
-positive = collector.cluster_df(collector.get_positive_examples())
+all_positive = collector.cluster_df(collector.get_positive_examples())
 
 # Get the negative examples and cluster them
-negative = collector.cluster_df(collector.get_negative_examples())
+all_negative = collector.cluster_df(collector.get_negative_examples())
+# positive are only the ones where accession matches cluster_id, so we have one representative per cluster
+positive = all_positive.filter(pl.col("accession") == pl.col("cluster_id"))
+
 # Add a column with the sequence neighbouring the Cleavage site.
 # ┌───────────┬───────────────────────┬──────────────────────────┐
 # │           │                       │                          │
@@ -73,3 +79,22 @@ positive = positive.with_columns(
         ]
     ).alias("motif")
 )
+
+
+fig = generate_logo(positive["motif"].to_list(), K_RESIDUES_BEFORE, K_RESIDUES_AFTER)
+fig.savefig(".imgs/positive_logo.svg")
+
+# possible aas
+ALPHABET = "GAVPLIMFWYSTCNQHDEKR"
+
+# Create PSWM (Position Score Weight Matrix) as a 2D array with shape (len(ALPHABET), K_RESIDUES_BEFORE + K_RESIDUES_AFTER)
+pswm = np.zeros((K_RESIDUES_BEFORE + K_RESIDUES_AFTER, len(ALPHABET)), dtype=int)
+
+# loop over motifs
+for motif in positive["motif"]:
+    for i, aa in enumerate(motif):
+        if aa in ALPHABET:
+            aa_index = ALPHABET.index(aa)
+            pswm[i, aa_index] += 1
+
+pswm
