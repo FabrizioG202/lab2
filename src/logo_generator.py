@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 def generate_logo(
     sequences: list[str], left_bound: int, right_bound: int
 ) -> plt.Figure:
-    # Display the motif as a sequence logo
+    # Compute the counts for the logo.
     counts_matrix = logomaker.alignment_to_matrix(
         sequences,
         to_type="information",
@@ -13,6 +13,8 @@ def generate_logo(
     )
 
     fig, ax = plt.subplots(figsize=(12, 4))
+
+    # Set x axis as relative to the cleavage site.
     ax.set_xticks(range(left_bound + right_bound))
     ax.set_xticklabels(
         [str(i) for i in range(-left_bound, 0)]

@@ -51,6 +51,7 @@ all_positive = collector.cluster_df(collector.get_positive_examples())
 
 # Get the negative examples and cluster them
 all_negative = collector.cluster_df(collector.get_negative_examples())
+
 # positive are only the ones where accession matches cluster_id, so we have one representative per cluster
 positive = all_positive.filter(pl.col("accession") == pl.col("cluster_id"))
 
@@ -81,14 +82,19 @@ positive = positive.with_columns(
 )
 
 
-fig = generate_logo(positive["motif"].to_list(), K_RESIDUES_BEFORE, K_RESIDUES_AFTER)
+# generate the logo
+fig = generate_logo(
+    positive["motif"].to_list(),
+    left_bound=K_RESIDUES_BEFORE,
+    right_bound=K_RESIDUES_AFTER,
+)
 fig.savefig(".imgs/positive_logo.svg")
 
 # possible aas
 ALPHABET = "GAVPLIMFWYSTCNQHDEKR"
 
 # Create PSWM (Position Score Weight Matrix) as a 2D array with shape (len(ALPHABET), K_RESIDUES_BEFORE + K_RESIDUES_AFTER)
-pswm = np.zeros((K_RESIDUES_BEFORE + K_RESIDUES_AFTER, len(ALPHABET)), dtype=int)
+pswm = np.ones((K_RESIDUES_BEFORE + K_RESIDUES_AFTER, len(ALPHABET)), dtype=int)
 
 # loop over motifs
 for motif in positive["motif"]:
