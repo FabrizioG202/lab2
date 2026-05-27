@@ -16,7 +16,13 @@ Both sets were also limited to the taxa of eukaroyot and areviewed entries, and 
 
 Further selection on the positive entries was made to select proteins which had informaton about the cleavage site and a Signal Peptide with a length of at least 14bp.
 
+// Initial filtering: 2960 entries to 2942
+// After clustering 1093
 For the negative set, additional information was added to the data representing the presence of a transmembrane helix, whose  hydrophobicity profile mimicks the one of a signal peptide.
+
+// 20806 total, 18301 w/o TM, 2505 with TM
+// after clustering: 9028
+
 
 == Clustering
 Clustering was performed using mmseqs2 [cit],

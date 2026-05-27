@@ -20,50 +20,7 @@ from tqdm import tqdm
 from src.run_mmseqs import run_mmseqs
 
 
-def query_uniprot_streamed(query: str, fields: list[str], file_name: str):
-    # Code below is directly from uniprot's own API docs.
-    re_next_link = re.compile(r'<(.+)>; rel="next"')
-    retries = Retry(total=5, backoff_factor=0.25, status_forcelist=[500, 502, 503, 504])
-    session = requests.Session()
-    session.mount("https://", HTTPAdapter(max_retries=retries))
-
-    def __get_next_link(headers):
-        if "Link" in headers:
-            match = re_next_link.match(headers["Link"])
-            if match:
-                return match.group(1)
-
-    def __get_batch(batch_url):
-        while batch_url:
-            response = session.get(batch_url)
-            response.raise_for_status()
-            total = response.headers["x-total-results"]
-            yield response, total
-            batch_url = __get_next_link(response.headers)
-
-    fields_data = ",".join(fields)
-
-    query_encoded = requests.utils.quote(query)
-
-    url = f"https://rest.uniprot.org/uniprotkb/search?format=tsv&query={query_encoded}&size=500&fields={fields_data}"
-
-    with open(file_name, "w", encoding="utf8") as file:
-        total = None
-
-        # header line
-        file.write("\t".join(fields) + "\n")
-
-        with tqdm(total=total, desc="Fetching UniProt data") as pbar:
-            for batch, total in __get_batch(url):
-                # Discard the header line, we use the fields
-                lines = batch.text.splitlines()[1:]
-
-                file.write("\n".join(lines) + "\n")
-                pbar.update(len(lines))
-                pbar.total = int(total)
-
-
-def query_uniprot_json_objs(query: str, page_size: int = 500):
+def _query_uniprot_json_objs(query: str, page_size: int = 500):
     # Code below is directly from uniprot's own API docs.
 
     re_next_link = re.compile(r'<(.+)>; rel="next"')
@@ -71,26 +28,26 @@ def query_uniprot_json_objs(query: str, page_size: int = 500):
     session = requests.Session()
     session.mount("https://", HTTPAdapter(max_retries=retries))
 
-    def __get_next_link(headers):
+    def _get_next_link(headers):
         if "Link" in headers:
             match = re_next_link.match(headers["Link"])
             if match:
                 return match.group(1)
 
-    def __get_batch(batch_url):
+    def _get_batch(batch_url):
         while batch_url:
             response = session.get(batch_url)
             response.raise_for_status()
             total = response.headers["x-total-results"]
             yield response, total
-            batch_url = __get_next_link(response.headers)
+            batch_url = _get_next_link(response.headers)
 
     query_encoded = requests.utils.quote(query)
 
     url = f"https://rest.uniprot.org/uniprotkb/search?format=json&query={query_encoded}&size={page_size}"
 
     with tqdm(desc="Fetching UniProt data") as pbar:
-        for batch, total in __get_batch(url):
+        for batch, total in _get_batch(url):
             results = batch.json()["results"]
 
             pbar.update(len(results))
@@ -122,7 +79,7 @@ class DataCollector:
 
         # Check if cached data exists
         if not ignore_cache and os.path.exists(cache_file):
-            logging.info(
+            print(
                 "Using cached positive examples. Set ignore_cache=True to fetch new data from UniProt."
             )
             return pl.read_csv(cache_file, separator="\t")
@@ -131,11 +88,9 @@ class DataCollector:
         # TODO: This can be made a bit better by using a function and a generator I think
         rows = []
 
-        objects = query_uniprot_json_objs(self.positive_query)
+        objects = list(_query_uniprot_json_objs(self.positive_query))
 
-        logging.info(
-            f"Total Number of positive examples fetched from UniProt: {len(objects)}"
-        )
+        print(f"Total Number of positive examples fetched from UniProt: {len(objects)}")
 
         for o in objects:
             features = o["features"]
@@ -192,7 +147,7 @@ class DataCollector:
 
         # Fetch the data from accession
         # TODO: This can be made a bit better by using a function and a generator I think
-        for o in query_uniprot_json_objs(self.negative_query):
+        for o in _query_uniprot_json_objs(self.negative_query):
             # TODO: I think this can be inlined
             # Wether the protein has a transmembrane domain in the first 90 residues
             has_transmembrane = False

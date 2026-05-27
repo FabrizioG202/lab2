@@ -1,14 +1,19 @@
+import importlib
 import re
 
 import logomaker
 import numpy as np
 import polars as pl
 
-from src.data_collection import DataCollector
-from src.logo_generator import generate_logo
+import src.data_collection
+import src.logo_generator
+
+# from src.data_collection import DataCollector
 from src.utils import AdditionalProtParamData
 
-collector = DataCollector(
+importlib.reload(src.data_collection)
+
+collector = src.data_collection.DataCollector(
     positive_query="""
     (
         (taxonomy_id:2759)
@@ -52,8 +57,10 @@ all_positive = collector.cluster_df(collector.get_positive_examples())
 # Get the negative examples and cluster them
 all_negative = collector.cluster_df(collector.get_negative_examples())
 
+
 # positive are only the ones where accession matches cluster_id, so we have one representative per cluster
 positive = all_positive.filter(pl.col("accession") == pl.col("cluster_id"))
+negative = all_negative.filter(pl.col("accession") == pl.col("cluster_id"))
 
 # Add a column with the sequence neighbouring the Cleavage site.
 # ┌───────────┬───────────────────────┬──────────────────────────┐
@@ -81,9 +88,10 @@ positive = positive.with_columns(
     ).alias("motif")
 )
 
+importlib.reload(src.logo_generator)
 
 # generate the logo
-fig = generate_logo(
+fig = src.logo_generator.generate_logo(
     positive["motif"].to_list(),
     left_bound=K_RESIDUES_BEFORE,
     right_bound=K_RESIDUES_AFTER,
