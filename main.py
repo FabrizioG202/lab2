@@ -4,13 +4,14 @@ import re
 import logomaker
 import numpy as np
 import polars as pl
+from cycler import L
+from fontTools.merge.layout import first
 
 import src.data_collection
 import src.logo_generator
+import src.utils.AdditionalProtParamData
 
-# from src.data_collection import DataCollector
-from src.utils import AdditionalProtParamData
-
+importlib.reload(src.utils.AdditionalProtParamData)
 importlib.reload(src.data_collection)
 
 collector = src.data_collection.DataCollector(
@@ -72,7 +73,10 @@ negative = all_negative.filter(pl.col("accession") == pl.col("cluster_id"))
 # └────────────────────────────────┼─────────────────────────────┘
 #                           cleavage site
 
-K_RESIDUES_BEFORE = 13
+# K_RESIDUES_BEFORE = 13
+# K_RESIDUES_AFTER = 2
+
+K_RESIDUES_BEFORE = 6
 K_RESIDUES_AFTER = 2
 
 # Add a column to the positive which has the motifs (the K residues before and after the cleavage site)
@@ -99,19 +103,70 @@ fig = src.logo_generator.generate_logo(
 fig.savefig(".imgs/positive_logo.svg")
 
 # possible aas
-ALPHABET = "GAVPLIMFWYSTCNQHDEKR"
+# ALPHABET = "GAVPLIMFWYSTCNQHDEKR"
+# ALPHABET = sorted(list("GAVPLIMFWYSTCNQHDEKR"))
+ALPHABET = list("ARNDCQEGHILKMFPSTWYV")
 
 # split 80% train 20% test
-positive_train = positive.sample(fraction=0.8, seed=42)
+# positive_train = positive.sample(fraction=0.8, seed=42)
 
 # Create PSWM (Position Score Weight Matrix) as a 2D array with shape (len(ALPHABET), K_RESIDUES_BEFORE + K_RESIDUES_AFTER)
-pswm = np.ones((K_RESIDUES_BEFORE + K_RESIDUES_AFTER, len(ALPHABET)), dtype=int)
+pswm = np.ones((K_RESIDUES_BEFORE + K_RESIDUES_AFTER, len(ALPHABET)), dtype=float)
+
+# motifs = positive_train["motif"].to_list()
+motifs = ["STAAQAEP", "AVESSPIF", "LTVALAAE", "LSLSQSTN", "MIGVESVR", "SKPTRAFS"]
 
 # loop over motifs
-for motif in positive_train["motif"]:
+for motif in motifs:
     for i, aa in enumerate(motif):
         if aa in ALPHABET:
             # TODO: This is really inefficient, we should create a map instead.
             aa_index = ALPHABET.index(aa)
             pswm[i, aa_index] += 1
-pswm
+
+
+PWSM = np.log2(
+    np.round(
+        # Normalize by the number of sequences and 20 pseudocounts
+        # (pswm / (len(motifs) + 20))
+        np.round(pswm / (len(motifs) + 20), 2)
+        / [
+            src.utils.AdditionalProtParamData.swissprot_composition_2[aa]
+            for aa in ALPHABET
+        ],
+        1,
+    )
+)
+
+np.round(PWSM, 1)
+
+
+def get_scores_for_sequence(
+    PWSM: np.ndarray, sequence: str, alphabet: list[str]
+) -> list[float]:
+
+    scores = []
+
+    window_size = PWSM.shape[0]
+
+    # We select only the first 90 aa
+    seq = sequence[:90]
+
+    for i in range(len(seq) - window_size + 1):
+        window = seq[i : i + window_size]
+        score = 0
+
+        for j, aa in enumerate(window):
+            if aa in alphabet:
+                aa_index = alphabet.index(aa)
+                score += PWSM[j, aa_index]
+
+        scores.append(score)
+
+    return scores
+
+
+# TEST_SEQ = positive[0]["sequence"].to_list()[0]
+
+scores = get_scores_for_sequence(PWSM, "MRFLAATFLLLALSTAAQAEPVQF", ALPHABET)
+np.max(np.round(scores, 1))
