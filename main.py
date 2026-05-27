@@ -101,14 +101,17 @@ fig.savefig(".imgs/positive_logo.svg")
 # possible aas
 ALPHABET = "GAVPLIMFWYSTCNQHDEKR"
 
+# split 80% train 20% test
+positive_train = positive.sample(fraction=0.8, seed=42)
+
 # Create PSWM (Position Score Weight Matrix) as a 2D array with shape (len(ALPHABET), K_RESIDUES_BEFORE + K_RESIDUES_AFTER)
 pswm = np.ones((K_RESIDUES_BEFORE + K_RESIDUES_AFTER, len(ALPHABET)), dtype=int)
 
 # loop over motifs
-for motif in positive["motif"]:
+for motif in positive_train["motif"]:
     for i, aa in enumerate(motif):
         if aa in ALPHABET:
+            # TODO: This is really inefficient, we should create a map instead.
             aa_index = ALPHABET.index(aa)
             pswm[i, aa_index] += 1
-
 pswm
