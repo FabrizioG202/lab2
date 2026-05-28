@@ -25,4 +25,4 @@ For the negative set, additional information was added to the data representing 
 
 
 == Clustering
-Clustering was performed using mmseqs2 [cit],
+Clustering was performed using mmseqs2 [cit], using parameters `=c 0.4 --min-seq-id 0.3 --cov-mode 0 --cluster-mode 1`, giving clusters with less than 30\% pairwise identity.

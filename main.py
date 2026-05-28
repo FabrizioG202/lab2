@@ -1,9 +1,11 @@
 import importlib
 import re
+from dataclasses import dataclass
 
 import logomaker
 import numpy as np
 import polars as pl
+from Bio.bgzf import data
 from cycler import L
 from fontTools.merge.layout import first
 
@@ -73,11 +75,11 @@ negative = all_negative.filter(pl.col("accession") == pl.col("cluster_id"))
 # └────────────────────────────────┼─────────────────────────────┘
 #                           cleavage site
 
-# K_RESIDUES_BEFORE = 13
-# K_RESIDUES_AFTER = 2
-
-K_RESIDUES_BEFORE = 6
+K_RESIDUES_BEFORE = 13
 K_RESIDUES_AFTER = 2
+
+# K_RESIDUES_BEFORE = 6
+# K_RESIDUES_AFTER = 2
 
 # Add a column to the positive which has the motifs (the K residues before and after the cleavage site)
 # We assume this does not throw since we selected for residues with SP cleavage site > 14 and sequence length > 90
@@ -103,18 +105,15 @@ fig = src.logo_generator.generate_logo(
 fig.savefig(".imgs/positive_logo.svg")
 
 # possible aas
-# ALPHABET = "GAVPLIMFWYSTCNQHDEKR"
-# ALPHABET = sorted(list("GAVPLIMFWYSTCNQHDEKR"))
-ALPHABET = list("ARNDCQEGHILKMFPSTWYV")
+ALPHABET = list("GAVPLIMFWYSTCNQHDEKR")
 
 # split 80% train 20% test
-# positive_train = positive.sample(fraction=0.8, seed=42)
+positive_train = positive.sample(fraction=0.8, seed=42)
 
 # Create PSWM (Position Score Weight Matrix) as a 2D array with shape (len(ALPHABET), K_RESIDUES_BEFORE + K_RESIDUES_AFTER)
 pswm = np.ones((K_RESIDUES_BEFORE + K_RESIDUES_AFTER, len(ALPHABET)), dtype=float)
 
-# motifs = positive_train["motif"].to_list()
-motifs = ["STAAQAEP", "AVESSPIF", "LTVALAAE", "LSLSQSTN", "MIGVESVR", "SKPTRAFS"]
+motifs = positive_train["motif"].to_list()
 
 # loop over motifs
 for motif in motifs:
@@ -126,19 +125,12 @@ for motif in motifs:
 
 
 PWSM = np.log2(
-    np.round(
-        # Normalize by the number of sequences and 20 pseudocounts
-        # (pswm / (len(motifs) + 20))
-        np.round(pswm / (len(motifs) + 20), 2)
-        / [
-            src.utils.AdditionalProtParamData.swissprot_composition_2[aa]
-            for aa in ALPHABET
-        ],
-        1,
-    )
+    # Normalize by the number of sequences and 20 pseudocounts
+    (pswm / (len(motifs) + 20))
+    / [
+        src.utils.AdditionalProtParamData.swissprot_composition_2[aa] for aa in ALPHABET
+    ],
 )
-
-np.round(PWSM, 1)
 
 
 def get_scores_for_sequence(
@@ -166,7 +158,66 @@ def get_scores_for_sequence(
     return scores
 
 
-# TEST_SEQ = positive[0]["sequence"].to_list()[0]
+# def cross_validation(folds: int, pwsm: np.ndarray, sequence_data: pl.DataFrame):
+sequence_data = pl.concat(
+    [
+        positive.with_columns(pl.lit(1).alias("label")),  # add a labe with value of 0
+        negative.with_columns(pl.lit(0).alias("label")),  # add a labe with value of 1
+    ],
+    how="diagonal",
+)
 
-scores = get_scores_for_sequence(PWSM, "MRFLAATFLLLALSTAAQAEPVQF", ALPHABET)
-np.max(np.round(scores, 1))
+folds = 5
+
+# add a fold column to the dataframe data
+sequence_data = sequence_data.with_columns(
+    pl.col("accession").map_elements(lambda x: hash(x) % folds).alias("fold")
+)
+
+
+@dataclass
+class _FoldDesc:
+    training: list[int]
+    testing: list[int]
+    validation: list[int]
+
+
+desc = _FoldDesc(
+    training=[0, 1, 2],
+    validation=[3],
+    testing=[5],
+)
+
+y_validation = sequence_data.filter(pl.col("fold").is_in(desc.validation))[
+    "label"
+].to_list()
+
+
+y_validation_scores = [
+    np.max(get_scores_for_sequence(PWSM, s, ALPHABET))
+    for s in sequence_data.filter(pl.col("fold").is_in(desc.validation))[
+        "sequence"
+    ].to_list()
+]
+import sklearn.metrics
+
+precision, recall, thresholds = sklearn.metrics.precision_recall_curve(
+    y_validation, y_validation_scores
+)
+
+fscore = (
+    2
+    * (precision * recall)
+    / (
+        precision + recall + 1e-8  # to avoid division by zero
+    )
+)
+index = np.argmax(fscore)
+optimal_threshold = thresholds[index]
+
+y_test_scores = [
+    np.max(get_scores_for_sequence(PWSM, s, ALPHABET))
+    for s in sequence_data.filter(pl.col("fold").is_in(desc.testing))[
+        "sequence"
+    ].to_list()
+]
