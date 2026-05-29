@@ -138,7 +138,7 @@ class DataCollector:
 
         # Check if cached data exists
         if not ignore_cache and os.path.exists(cache_file):
-            logging.info(
+            print(
                 "Using cached negative examples. Set ignore_cache=True to fetch new data from UniProt."
             )
             return pl.read_csv(cache_file, separator="\t")

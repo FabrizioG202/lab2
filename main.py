@@ -1,13 +1,13 @@
 import importlib
+import itertools
 import re
 from dataclasses import dataclass
+from typing import Iterable, Iterator
 
 import logomaker
 import numpy as np
 import polars as pl
-from Bio.bgzf import data
-from cycler import L
-from fontTools.merge.layout import first
+import sklearn.metrics
 
 import src.data_collection
 import src.logo_generator
@@ -48,9 +48,10 @@ collector = src.data_collection.DataCollector(
 )
 
 
+collector.clean_cache()
+
 # Setup the working director for the project
 # (creates .data, and .imgs)
-collector.clean_cache()
 collector.setup_wd()
 
 
@@ -94,7 +95,6 @@ positive = positive.with_columns(
     ).alias("motif")
 )
 
-importlib.reload(src.logo_generator)
 
 # generate the logo
 fig = src.logo_generator.generate_logo(
@@ -110,52 +110,69 @@ ALPHABET = list("GAVPLIMFWYSTCNQHDEKR")
 # split 80% train 20% test
 positive_train = positive.sample(fraction=0.8, seed=42)
 
-# Create PSWM (Position Score Weight Matrix) as a 2D array with shape (len(ALPHABET), K_RESIDUES_BEFORE + K_RESIDUES_AFTER)
-pswm = np.ones((K_RESIDUES_BEFORE + K_RESIDUES_AFTER, len(ALPHABET)), dtype=float)
+class PSWM:
+    data: np.ndarray
+    alphabet: list[str]
 
-motifs = positive_train["motif"].to_list()
-
-# loop over motifs
-for motif in motifs:
-    for i, aa in enumerate(motif):
-        if aa in ALPHABET:
-            # TODO: This is really inefficient, we should create a map instead.
-            aa_index = ALPHABET.index(aa)
-            pswm[i, aa_index] += 1
+    def __init__(self, data : np.ndarray, alphabet: list[str]):
+        self.data = data
+        self.alphabet = alphabet
 
 
-PWSM = np.log2(
-    # Normalize by the number of sequences and 20 pseudocounts
-    (pswm / (len(motifs) + 20))
-    / [
-        src.utils.AdditionalProtParamData.swissprot_composition_2[aa] for aa in ALPHABET
-    ],
-)
+    # Compute the pswm for a given list of motifs
+    @staticmethod
+    def compute_for(motifs : list[str],  alphabet: list[str], motif_length: int | None = None,) -> "PSWM":
+
+        if (motif_length is None):
+            motif_length = len(motifs[0])
+
+        # Create PSWM (Position Score Weight Matrix) as a 2D array with shape (len(ALPHABET), K_RESIDUES_BEFORE + K_RESIDUES_AFTER)
+        pswm = np.ones((motif_length, len(alphabet)), dtype=float)
+
+        # loop over motifs
+        for motif in motifs:
+            for i, aa in enumerate(motif):
+                if aa in ALPHABET:
+                    # TODO: This is really inefficient, we should create a map instead.
+                    aa_index = ALPHABET.index(aa)
+                    pswm[i, aa_index] += 1
 
 
-def get_scores_for_sequence(
-    PWSM: np.ndarray, sequence: str, alphabet: list[str]
-) -> list[float]:
+        return PSWM(data= np.log2(
+            # Normalize by the number of sequences and 20 pseudocounts
+            (pswm / (len(motifs) + 20))
+            / [
+                src.utils.AdditionalProtParamData.swissprot_composition_2[aa] for aa in ALPHABET
+            ],
+        ), alphabet=alphabet)
 
-    scores = []
 
-    window_size = PWSM.shape[0]
 
-    # We select only the first 90 aa
-    seq = sequence[:90]
+    # Gets the list of scores for all the windows of pswm's size
+    # over the sequence.
+    def get_scores(self, sequence : str, ):
+        scores = []
 
-    for i in range(len(seq) - window_size + 1):
-        window = seq[i : i + window_size]
-        score = 0
+        window_size = self.data.shape[0]
 
-        for j, aa in enumerate(window):
-            if aa in alphabet:
-                aa_index = alphabet.index(aa)
-                score += PWSM[j, aa_index]
+        # We select only the first 90 aa
+        seq = sequence[:90]
 
-        scores.append(score)
+        for i in range(len(seq) - window_size + 1):
+            window = seq[i : i + window_size]
+            score = 0
 
-    return scores
+            for j, aa in enumerate(window):
+                if aa in self.alphabet:
+                    aa_index = self.alphabet.index(aa)
+                    score += self.data[j, aa_index]
+
+            scores.append(score)
+
+        return scores
+
+
+
 
 
 # def cross_validation(folds: int, pwsm: np.ndarray, sequence_data: pl.DataFrame):
@@ -169,11 +186,6 @@ sequence_data = pl.concat(
 
 folds = 5
 
-# add a fold column to the dataframe data
-sequence_data = sequence_data.with_columns(
-    pl.col("accession").map_elements(lambda x: hash(x) % folds).alias("fold")
-)
-
 
 @dataclass
 class _FoldDesc:
@@ -181,12 +193,35 @@ class _FoldDesc:
     testing: list[int]
     validation: list[int]
 
+    @staticmethod
+    def generate_all(
+        k: int,
+        training_count: int = 3,
+        testing_count: int = 1,
+        validation_count: int = 1,
+    ) -> "Iterator[_FoldDesc]":
+        assert training_count + testing_count + validation_count == k
 
-desc = _FoldDesc(
-    training=[0, 1, 2],
-    validation=[3],
-    testing=[5],
+        # generate all posible orderings of items in the set {0, 1, ..., k-1}
+        for ordering in itertools.permutations(range(k)):
+            yield _FoldDesc(
+                training=list(ordering[:training_count]),
+                testing=list(ordering[training_count : training_count + testing_count]),
+                validation=list(ordering[training_count + testing_count :]),
+            )
+
+def compute_pswm_threshold(folds: int):
+
+
+
+
+# add a fold column to the dataframe data
+sequence_data = sequence_data.with_columns(
+    pl.col("accession").map_elements(lambda x: hash(x) % folds).alias("fold")
 )
+
+desc = next(_FoldDesc.generate_all(folds))
+
 
 y_validation = sequence_data.filter(pl.col("fold").is_in(desc.validation))[
     "label"
@@ -199,7 +234,6 @@ y_validation_scores = [
         "sequence"
     ].to_list()
 ]
-import sklearn.metrics
 
 precision, recall, thresholds = sklearn.metrics.precision_recall_curve(
     y_validation, y_validation_scores
@@ -215,9 +249,19 @@ fscore = (
 index = np.argmax(fscore)
 optimal_threshold = thresholds[index]
 
-y_test_scores = [
-    np.max(get_scores_for_sequence(PWSM, s, ALPHABET))
+y_test_prediction = [
+    int(np.max(get_scores_for_sequence(PWSM, s, ALPHABET)) > optimal_threshold)
     for s in sequence_data.filter(pl.col("fold").is_in(desc.testing))[
         "sequence"
     ].to_list()
 ]
+
+y_test_truth = sequence_data.filter(pl.col("fold").is_in(desc.testing))[
+    "label"
+].to_list()
+
+confusion_matrix = sklearn.metrics.confusion_matrix(y_test_truth, y_test_prediction)
+TN, FP, FN, TP = confusion_matrix.ravel()
+
+accuracy = (TP + TN) / np.sum(confusion_matrix)
+sensitivity = TP / (TP + FN) if (TP + FN) > 0 else 0
