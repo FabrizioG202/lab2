@@ -1,9 +1,11 @@
+import itertools
 from dataclasses import dataclass
 from typing import Iterator
 
 import numpy as np
 import polars as pl
 import sklearn.metrics
+import tqdm
 
 import src.utils.AdditionalProtParamData
 
@@ -104,7 +106,10 @@ class PSWM:
             pl.col("accession").map_elements(lambda x: hash(x) % folds).alias("fold")
         )
 
-        for desc in _FoldDesc.generate_all(folds):
+        for desc in tqdm.tqdm(
+            _FoldDesc.generate_all(folds),
+            desc="Computing optimal threshold for each fold",
+        ):
             validation_df = sequence_data.filter(pl.col("fold").is_in(desc.validation))
             test_df = sequence_data.filter(pl.col("fold").is_in(desc.testing))
 
@@ -152,14 +157,11 @@ class PSWM:
         return np.mean([h.optimal_threshold for h in history]), history
 
 
-folds = 5
-
-
 @dataclass
 class _FoldDesc:
-    training: list[int]
-    testing: list[int]
-    validation: list[int]
+    training: set[int]
+    testing: set[int]
+    validation: set[int]
 
     @staticmethod
     def generate_all(
@@ -167,13 +169,43 @@ class _FoldDesc:
         training_count: int = 3,
         testing_count: int = 1,
         validation_count: int = 1,
-    ) -> "Iterator[_FoldDesc]":
+    ) -> "set[_FoldDesc]":
         assert training_count + testing_count + validation_count == k
+
+        # This is horribly inefficient, since we are converting the stuff
+        # back to a set after we computed all, but for small fold values
+        # this should suffice
+        out = []
 
         # generate all posible orderings of items in the set {0, 1, ..., k-1}
         for ordering in itertools.permutations(range(k)):
-            yield _FoldDesc(
-                training=list(ordering[:training_count]),
-                testing=list(ordering[training_count : training_count + testing_count]),
-                validation=list(ordering[training_count + testing_count :]),
+            out.append(
+                _FoldDesc(
+                    training=set(ordering[:training_count]),
+                    testing=set(
+                        ordering[training_count : training_count + testing_count]
+                    ),
+                    validation=set(ordering[training_count + testing_count :]),
+                )
             )
+
+        return set(out)
+
+    def __hash__(self):
+        return hash(
+            (
+                frozenset(self.training),
+                frozenset(self.testing),
+                frozenset(self.validation),
+            )
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, _FoldDesc):
+            return False
+
+        return (
+            frozenset(self.training) == frozenset(other.training)
+            and frozenset(self.testing) == frozenset(other.testing)
+            and frozenset(self.validation) == frozenset(other.validation)
+        )

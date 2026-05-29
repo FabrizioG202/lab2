@@ -79,9 +79,6 @@ negative = all_negative.filter(pl.col("accession") == pl.col("cluster_id"))
 K_RESIDUES_BEFORE = 13
 K_RESIDUES_AFTER = 2
 
-# K_RESIDUES_BEFORE = 6
-# K_RESIDUES_AFTER = 2
-
 # Add a column to the positive which has the motifs (the K residues before and after the cleavage site)
 # We assume this does not throw since we selected for residues with SP cleavage site > 14 and sequence length > 90
 positive = positive.with_columns(
@@ -109,3 +106,25 @@ ALPHABET = list("GAVPLIMFWYSTCNQHDEKR")
 
 # split 80% train 20% test
 positive_train = positive.sample(fraction=0.8, seed=42)
+
+
+import src.von_heijne; importlib.reload(src.von_heijne);  # noqa: E703 # fmt: skip
+
+pswm = src.von_heijne.PSWM.compute_for(
+    positive_train["motif"].to_list(), alphabet=ALPHABET
+)
+
+threshold, history = pswm.compute_optimal_threshold(
+    folds=5,
+    all_sequences=pl.concat(
+        [
+            positive.with_columns(pl.lit(1).alias("label")).select(
+                ["accession", "sequence", "label"]
+            ),
+            negative.with_columns(pl.lit(0).alias("label")).select(
+                ["accession", "sequence", "label"]
+            ),
+        ]
+    ),
+)
+threshold
