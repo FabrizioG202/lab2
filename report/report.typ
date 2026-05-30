@@ -42,6 +42,15 @@ For the negative set, additional information was added to the data representing 
 // 20806 total, 18301 w/o TM, 2505 with TM
 // after clustering: 9028
 
+== Von-Heijne Model
+
+The full dataset was split into a training and a test set with a ratio of 0.8. A Position-Specific Weight Matrix (PSWM) was then generated using 16bp windows (13bp upstream to 2bp downstream) surrounding the cleavage site. Amino acid frequencies were normalized using background amino acid frequencies from SwissProt. After initializing the matrix with pseudocounts of 1, the weights are computed as follows:
+
+$
+  w(a, i) = log_2(f(a, i) / f(a))
+$
+
+Where `f(a, i)` is the frequency of amino acid `a` at position `i` in the training set, and `f(a)` is the background frequency of amino acid `a` in SwissProt.
 
 == Clustering
 Clustering was performed using mmseqs2 [cit], using parameters `=c 0.4 --min-seq-id 0.3 --cov-mode 0 --cluster-mode 1`, giving clusters with less than 30\% pairwise identity.
