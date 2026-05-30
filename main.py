@@ -1,13 +1,19 @@
+import Bio.SeqUtils.ProtParamData
+from curses import window
+from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import importlib
 import itertools
 import re
 from dataclasses import dataclass
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Any
 import sklearn.metrics
 import logomaker
 import numpy as np
 import polars as pl
 import sklearn.metrics
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
 
 import src.data_collection
 import src.logo_generator
@@ -146,10 +152,6 @@ y_pred = [
 
 confusion_matrix = sklearn.metrics.confusion_matrix(y_true, y_pred)
 
-import plotly.express as px
-import plotly.graph_objects as go
-import plotly.io as pio
-
 
 # plot confusion matrix using plotly
 def plot_confusion_matrix(confusion_matrix: np.ndarray) -> "go.Figure":
@@ -173,3 +175,63 @@ def plot_confusion_matrix(confusion_matrix: np.ndarray) -> "go.Figure":
 plot_confusion_matrix(confusion_matrix).write_image(
     ".imgs/von_heijne_confusion_matrix.svg"
 )
+
+
+# A function to get the compositions in aa for the given sequence
+# TODO: Make the alphabet a parameter...
+def get_composition(sequence: str) -> dict[str, float]:
+    composition = {aa: 0 for aa in ALPHABET}
+    for aa in sequence:
+        if aa in composition:
+            composition[aa] += 1
+    total = len(sequence)
+    return {aa: count / total for aa, count in composition.items()}
+
+
+def get_features(sequence: str) -> dict[str, float]:
+    window_size = 5
+
+    # pad the sequence with X so that with the given
+    # window size, we can always get a full window of residues around the cleavage site.
+    def _pad_sequence(seq: str) -> str:
+        padding = "X" * (window_size // 2)
+        return padding + seq + padding
+
+    analysis = ProteinAnalysis(_pad_sequence(sequence))
+
+    def _calc_params(name: str, values: list[float]) -> dict[str, int | float | Any]:
+        return {
+            f"max_{name}": np.max(values),
+            f"avg_{name}": np.mean(values),
+        }
+
+    return {
+        **{f"comp_{aa}": v for aa, v in get_composition(sequence).items()},
+        **_calc_params(
+            "hydrophobicity", analysis.protein_scale(Bio.SeqUtils.ProtParamData.kd, 5)
+        ),
+        **_calc_params(
+            "alpha_helix_tendency",
+            analysis.protein_scale(
+                src.utils.AdditionalProtParamData.alpha_helix_tendency, 5
+            ),
+        ),
+        **_calc_params(
+            "transmembrane_tendency",
+            analysis.protein_scale(
+                src.utils.AdditionalProtParamData.transmemberane_tendency, 5
+            ),
+        ),
+        **_calc_params(
+            "bulkiness",
+            analysis.protein_scale(src.utils.AdditionalProtParamData.bulkiness, 5),
+        ),
+        **_calc_params(
+            "charge",
+            analysis.protein_scale(src.utils.AdditionalProtParamData.polarity, 5),
+        ),
+    }
+
+
+TEST_SEQUENCE = positive["sequence"][0]
+get_features(TEST_SEQUENCE)
