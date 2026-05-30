@@ -3,7 +3,7 @@ import itertools
 import re
 from dataclasses import dataclass
 from typing import Iterable, Iterator
-
+import sklearn.metrics
 import logomaker
 import numpy as np
 import polars as pl
@@ -12,9 +12,7 @@ import sklearn.metrics
 import src.data_collection
 import src.logo_generator
 import src.utils.AdditionalProtParamData
-
-importlib.reload(src.utils.AdditionalProtParamData)
-importlib.reload(src.data_collection)
+import src.von_heijne; importlib.reload(src.von_heijne);  # noqa: E703, E702 # fmt: skip
 
 collector = src.data_collection.DataCollector(
     positive_query="""
@@ -104,27 +102,74 @@ fig.savefig(".imgs/positive_logo.svg")
 # possible aas
 ALPHABET = list("GAVPLIMFWYSTCNQHDEKR")
 
+
+def split_df(
+    df: pl.DataFrame, fraction: float, seed: int
+) -> tuple[pl.DataFrame, pl.DataFrame]:
+    # create a shuffled version of the dataframe
+    shuffled = df.sample(fraction=1.0, shuffle=True, seed=seed)
+
+    # split it into 2
+    count = int(len(df) * fraction)
+    return shuffled[:count], shuffled[count:]
+
+
+# combined dataframes with:
+# label = 1 for positive
+# label = 0 for negative
+combined = pl.concat(
+    [
+        positive.with_columns(pl.lit(1).alias("label")),
+        negative.with_columns(pl.lit(0).alias("label")),
+    ],
+    how="diagonal",
+)
+
 # split 80% train 20% test
-positive_train = positive.sample(fraction=0.8, seed=42)
+combined_train, combined_test = split_df(combined, fraction=0.8, seed=42)
 
-
-import src.von_heijne; importlib.reload(src.von_heijne);  # noqa: E703 # fmt: skip
-
+# Create the PSWM using the train split.
 pswm = src.von_heijne.PSWM.compute_for(
-    positive_train["motif"].to_list(), alphabet=ALPHABET
+    [m for m in combined_train["motif"].to_list() if m is not None], alphabet=ALPHABET
 )
 
 threshold, history = pswm.compute_optimal_threshold(
-    folds=5,
-    all_sequences=pl.concat(
-        [
-            positive.with_columns(pl.lit(1).alias("label")).select(
-                ["accession", "sequence", "label"]
-            ),
-            negative.with_columns(pl.lit(0).alias("label")).select(
-                ["accession", "sequence", "label"]
-            ),
-        ]
-    ),
+    folds=5, all_sequences=combined_train.select(["accession", "sequence", "label"])
 )
-threshold
+# Now, evaluate on the test set
+y_true = combined_test["label"].to_list()
+y_pred = [
+    1 if max(pswm.get_scores(motif[:90])) >= threshold else 0
+    for motif in combined_test["sequence"].to_list()
+]
+
+
+confusion_matrix = sklearn.metrics.confusion_matrix(y_true, y_pred)
+
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
+
+
+# plot confusion matrix using plotly
+def plot_confusion_matrix(confusion_matrix: np.ndarray) -> "go.Figure":
+
+    # to make it work with zed's REPL.
+    # see: https://github.com/zed-industries/zed/issues/19890
+    pio.renderers.default = "png"
+
+    fig = px.imshow(
+        confusion_matrix,
+        labels={"x": "Predicted", "y": "True"},
+        x=["Negative", "Positive"],
+        y=["Negative", "Positive"],
+        text_auto=True,
+        color_continuous_scale="Blues",
+    )
+    fig.update_layout(title="Confusion Matrix")
+    return fig
+
+
+plot_confusion_matrix(confusion_matrix).write_image(
+    ".imgs/von_heijne_confusion_matrix.svg"
+)
