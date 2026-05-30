@@ -50,7 +50,14 @@ $
   w(a, i) = log_2(f(a, i) / f(a))
 $
 
-Where `f(a, i)` is the frequency of amino acid `a` at position `i` in the training set, and `f(a)` is the background frequency of amino acid `a` in SwissProt.
+Where `f(a, i)` is the frequency of amino acid `a` at position `i` in the training set, and `f(a)` is the background frequency of amino acid `a` in SwissProt. The score for a given sequence is then computed as:
+$
+  S = max_(j=1)^(90-16+1) sum_(i=1)^(16) w(a_(j+i-1), i)
+$
+
+
+scores are computed over the first 90bp of the given sequence, using a sliding window 16bp long.
+
 
 == Clustering
 Clustering was performed using mmseqs2 [cit], using parameters `=c 0.4 --min-seq-id 0.3 --cov-mode 0 --cluster-mode 1`, giving clusters with less than 30\% pairwise identity.
