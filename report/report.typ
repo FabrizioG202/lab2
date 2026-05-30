@@ -1,10 +1,29 @@
-#set document(
-  title: [
-    A Comparison of Con Heijne, MLP, and SVM Models for the classification of Signal Peptides.
+#set page(
+  columns: 2,
+)
+
+#set text(
+  size: 11pt,
+)
+
+#set par(
+  leading: 0.56em,
+  justify: true,
+)
+
+#place(
+  top + center,
+  scope: "parent",
+  float: true,
+  text(1.4em, weight: "bold")[
+    A comparative analysis of Von-Heijne, SVM and Perceptron Models for the detecton of Signal Peptides.
   ],
 )
 
-#title()
+= Abstract
+#text(weight: "bold")[Motivation:] This is the motivation
+
+#text(weight: "bold")[Results:] This are the results.
 
 = Materials and Methods
 == Data Collection
