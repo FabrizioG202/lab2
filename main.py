@@ -14,6 +14,8 @@ import sklearn.metrics
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
+import contextlib
+import io
 
 import src.data_collection
 import src.logo_generator
@@ -197,40 +199,44 @@ def get_features(sequence: str) -> dict[str, float]:
         padding = "X" * (window_size // 2)
         return padding + seq + padding
 
-    analysis = ProteinAnalysis(_pad_sequence(sequence))
-
     def _calc_params(name: str, values: list[float]) -> dict[str, int | float | Any]:
         return {
             f"max_{name}": np.max(values),
             f"avg_{name}": np.mean(values),
         }
 
-    return {
-        **{f"comp_{aa}": v for aa, v in get_composition(sequence).items()},
-        **_calc_params(
-            "hydrophobicity", analysis.protein_scale(Bio.SeqUtils.ProtParamData.kd, 5)
-        ),
-        **_calc_params(
-            "alpha_helix_tendency",
-            analysis.protein_scale(
-                src.utils.AdditionalProtParamData.alpha_helix_tendency, 5
+    with contextlib.redirect_stderr(io.StringIO()):
+        analysis = ProteinAnalysis(_pad_sequence(sequence))
+
+        out = {
+            **{f"comp_{aa}": v for aa, v in get_composition(sequence[:22]).items()},
+            **_calc_params(
+                "hydrophobicity",
+                analysis.protein_scale(Bio.SeqUtils.ProtParamData.kd, 5),
             ),
-        ),
-        **_calc_params(
-            "transmembrane_tendency",
-            analysis.protein_scale(
-                src.utils.AdditionalProtParamData.transmemberane_tendency, 5
+            **_calc_params(
+                "alpha_helix_tendency",
+                analysis.protein_scale(
+                    src.utils.AdditionalProtParamData.alpha_helix_tendency, 5
+                ),
             ),
-        ),
-        **_calc_params(
-            "bulkiness",
-            analysis.protein_scale(src.utils.AdditionalProtParamData.bulkiness, 5),
-        ),
-        **_calc_params(
-            "charge",
-            analysis.protein_scale(src.utils.AdditionalProtParamData.polarity, 5),
-        ),
-    }
+            **_calc_params(
+                "transmembrane_tendency",
+                analysis.protein_scale(
+                    src.utils.AdditionalProtParamData.transmemberane_tendency, 5
+                ),
+            ),
+            **_calc_params(
+                "bulkiness",
+                analysis.protein_scale(src.utils.AdditionalProtParamData.bulkiness, 5),
+            ),
+            **_calc_params(
+                "charge",
+                analysis.protein_scale(src.utils.AdditionalProtParamData.polarity, 5),
+            ),
+        }
+
+    return out
 
 
 TEST_SEQUENCE = positive["sequence"][0]
