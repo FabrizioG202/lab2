@@ -263,6 +263,7 @@ X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
 
+
 pipeline = sklearn.pipeline.Pipeline(
     [
         ("scaler", sklearn.preprocessing.StandardScaler()),
@@ -286,12 +287,21 @@ PARAMS = [
 cv = sklearn.model_selection.StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 search = sklearn.model_selection.GridSearchCV(
-    estimator=pipeline, param_grid=PARAMS, cv=cv, n_jobs=-1, verbose=2, scoring="f1"
+    estimator=pipeline, param_grid=PARAMS, cv=cv, n_jobs=-1, verbose=3, scoring="f1"
 )
 
 _ = search.fit(X_train, y_train)
 best_model = search.best_estimator_
 
 y_test_pred = pipeline.predict(X_test)
+
+model = sklearn.pipeline.make_pipeline(
+    sklearn.preprocessing.StandardScaler(),
+    sklearn.svm.SVC(kernel="linear", probability=True, random_state=42),
+)
+
+_ = model.fit(X_train, y_train)
+
+y_test_pred = model.predict(X_test)
 
 print(sklearn.metrics.classification_report(y_test, y_test_pred))
