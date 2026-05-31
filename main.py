@@ -255,8 +255,8 @@ feature_df = pl.DataFrame(
 )
 
 # SVM Training Pipeline
-
-X = feature_df.drop(["label", "accession"]).to_numpy()
+X_df = feature_df.drop(["label", "accession"])
+X = X_df.to_numpy()
 y = feature_df["label"].to_numpy()
 
 X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
@@ -308,4 +308,69 @@ best_score
 
 _ = best_model.fit(X_train, y_train)  # ty:ignore[unresolved-attribute]
 
-print(sklearn.metrics.confusion_matrix(y_test, best_model.predict(X_test)))
+print(sklearn.metrics.confusion_matrix(y_test, best_model.predict(X_test)))  # ty:ignore[unresolved-attribute]
+
+result = sklearn.inspection.permutation_importance(
+    best_model,
+    X_test,
+    y_test,
+    scoring="f1_macro",
+    n_repeats=10,
+    random_state=42,
+    n_jobs=-1,
+)
+
+pi_importance_df = pl.DataFrame(
+    {
+        "feature": X_df.columns,
+        "importance_mean": result.importances_mean,
+        "importance_std": result.importances_std,
+    }
+).sort("importance_mean", descending=True)
+
+
+rf = sklearn.ensemble.RandomForestClassifier(
+    n_estimators=500, random_state=42, n_jobs=-1, class_weight="balanced"
+)
+
+_ = rf.fit(X_train, y_train)
+
+rf_importance_df = pl.DataFrame(
+    {
+        "feature": X_df.columns,
+        "importance": rf.feature_importances_,
+    }
+).sort("importance", descending=True)
+
+# plot the pi and rf importnace as side by side horizontal bar plots using plotly
+fig = go.Figure(
+    data=[
+        go.Bar(
+            x=pi_importance_df["importance_mean"],
+            y=pi_importance_df["feature"],
+            orientation="h",
+            name="Permutation Importance",
+            error_x=dict(type="data", array=pi_importance_df["importance_std"]),
+        ),
+        go.Bar(
+            x=rf_importance_df["importance"],
+            y=rf_importance_df["feature"],
+            orientation="h",
+            name="Random Forest Importance",
+        ),
+    ]
+)
+
+fig.update_layout(
+    title="Feature Importance",
+    xaxis_title="Importance",
+    yaxis_title="Feature",
+    yaxis={
+        "categoryorder": "total ascending",
+        "tickfont": {"size": 10},
+        "tickmode": "linear",
+    },
+    barmode="group",
+)
+
+fig.show()
