@@ -89,6 +89,7 @@ $
   )
 $
 
+==
 
 The threshold was computed using 5-fold cross validation.
 
@@ -97,6 +98,15 @@ Clustering was performed using mmseqs2 [cit], using parameters `=c 0.4 --min-seq
 
 
 = Results
+== SP Motifs
+From all SP-Endowed sequences, a motif logo was generated using the context around the cleavage site (13 bp upstream to 2bp downstream) @sp_motif.
+
+#place(top + center, scope: "parent", float: true, [#figure(
+    image(".imgs/positive_logo.svg"),
+
+    caption: [Motif logo for the context (-13bp to 2bp) surrounding the cleavage site],
+  )<sp_motif>,])
+
 For the Von-Hejne model the computed optimal threshold was $9.25$.
 // Image for the confusion matrix.
 
