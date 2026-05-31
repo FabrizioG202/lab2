@@ -374,3 +374,28 @@ fig.update_layout(
 )
 
 fig.show()
+
+
+# Neural Network Training Pipeline
+from sklearn.neural_network import MLPClassifier
+
+nn = MLPClassifier(
+    hidden_layer_sizes=(100, 50),
+    max_iter=1000,
+    random_state=42,
+    early_stopping=True,
+    validation_fraction=0.1,
+)
+
+_ = nn.fit(X_train, y_train)
+
+nn_predictions = nn.predict(X_test)
+nn_confusion_matrix = sklearn.metrics.confusion_matrix(y_test, nn_predictions)
+
+print("Neural Network Confusion Matrix:")
+print(nn_confusion_matrix)
+
+# Plot the neural network confusion matrix
+plot_confusion_matrix(nn_confusion_matrix).write_image(
+    ".imgs/neural_network_confusion_matrix.svg"
+)
