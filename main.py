@@ -283,25 +283,29 @@ PARAMS = [
     },
 ]
 
-
 cv = sklearn.model_selection.StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-search = sklearn.model_selection.GridSearchCV(
-    estimator=pipeline, param_grid=PARAMS, cv=cv, n_jobs=-1, verbose=3, scoring="f1"
-)
+best_score = -np.inf
+best_params = None
+best_model = None
 
-_ = search.fit(X_train, y_train)
-best_model = search.best_estimator_
+# Manual CV validation so that we can use tqdm to track the progress of the search.
+for params in tqdm(sklearn.model_selection.ParameterGrid(PARAMS), desc="SVM search"):
+    model = sklearn.base.clone(pipeline)
+    model.set_params(**params)
 
-y_test_pred = pipeline.predict(X_test)
+    scores = sklearn.model_selection.cross_val_score(
+        model, X_train, y_train, cv=cv, scoring="f1_macro", n_jobs=-1
+    )
 
-model = sklearn.pipeline.make_pipeline(
-    sklearn.preprocessing.StandardScaler(),
-    sklearn.svm.SVC(kernel="linear", probability=True, random_state=42),
-)
+    mean_score = scores.mean()
 
-_ = model.fit(X_train, y_train)
+    if mean_score > best_score:
+        best_score = mean_score
+        best_params = params
+        best_model = sklearn.base.clone(pipeline).set_params(**params)
+best_score
 
-y_test_pred = model.predict(X_test)
+_ = best_model.fit(X_train, y_train)  # ty:ignore[unresolved-attribute]
 
-print(sklearn.metrics.classification_report(y_test, y_test_pred))
+print(sklearn.metrics.confusion_matrix(y_test, best_model.predict(X_test)))
