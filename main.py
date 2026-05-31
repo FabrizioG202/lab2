@@ -1,5 +1,5 @@
+from tqdm import tqdm
 import Bio.SeqUtils.ProtParamData
-from curses import window
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import importlib
 import itertools
@@ -144,15 +144,15 @@ pswm = src.von_heijne.PSWM.compute_for(
 threshold, history = pswm.compute_optimal_threshold(
     folds=5, all_sequences=combined_train.select(["accession", "sequence", "label"])
 )
+
 # Now, evaluate on the test set
-y_true = combined_test["label"].to_list()
-y_pred = [
-    1 if max(pswm.get_scores(motif[:90])) >= threshold else 0
-    for motif in combined_test["sequence"].to_list()
-]
-
-
-confusion_matrix = sklearn.metrics.confusion_matrix(y_true, y_pred)
+confusion_matrix = sklearn.metrics.confusion_matrix(
+    combined_test["label"].to_list(),
+    [
+        1 if max(pswm.get_scores(motif[:90])) >= threshold else 0
+        for motif in combined_test["sequence"].to_list()
+    ],
+)
 
 
 # plot confusion matrix using plotly
@@ -239,5 +239,59 @@ def get_features(sequence: str) -> dict[str, float]:
     return out
 
 
-TEST_SEQUENCE = positive["sequence"][0]
-get_features(TEST_SEQUENCE)
+feature_df = pl.DataFrame(
+    [
+        {
+            "accession": row["accession"],
+            "label": row["label"],
+            **get_features(row["sequence"]),
+        }
+        for row in tqdm(
+            combined.iter_rows(named=True),
+            total=combined.height,
+            desc="Extracting features",
+        )
+    ],
+)
+
+# SVM Training Pipeline
+
+X = feature_df.drop(["label", "accession"]).to_numpy()
+y = feature_df["label"].to_numpy()
+
+X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+pipeline = sklearn.pipeline.Pipeline(
+    [
+        ("scaler", sklearn.preprocessing.StandardScaler()),
+        ("svm", sklearn.svm.SVC()),
+    ]
+)
+
+PARAMS = [
+    {
+        "svm__kernel": ["rbf"],
+        "svm__C": [0.1, 1, 10, 100],
+        "svm__gamma": ["scale", 0.001, 0.01, 0.1, 1],
+    },
+    {
+        "svm__kernel": ["linear"],
+        "svm__C": [0.1, 1, 10, 100],
+    },
+]
+
+
+cv = sklearn.model_selection.StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+search = sklearn.model_selection.GridSearchCV(
+    estimator=pipeline, param_grid=PARAMS, cv=cv, n_jobs=-1, verbose=2, scoring="f1"
+)
+
+_ = search.fit(X_train, y_train)
+best_model = search.best_estimator_
+
+y_test_pred = pipeline.predict(X_test)
+
+print(sklearn.metrics.classification_report(y_test, y_test_pred))
