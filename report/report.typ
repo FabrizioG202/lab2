@@ -26,7 +26,16 @@
 #text(weight: "bold")[Results:] This are the results.
 
 = Introduction
-For a protein to enter the secretory pathway, in both eukaryotic and prokaryotic cells, it must be endowed with a specific target signal. Often, this signal takes the shape of a short sequences located at the N-terminus of proteins. The signal peptide has a distinct three-domain structure, depicted in Figure 1, with a positively charged N-terminal region (n-region), a central hydrophobic region (h-region) and a more polar C-terminal region (c-region) containing the cleavage site. Given their importance in many aspects of cell biology, the accurate detection of SPs is a crucial task in bioinformatics, which has been tackled before with a variety of approaches, including machine learning (SVMs [https://pubmed.ncbi.nlm.nih.gov/19470175], [https://pubmed.ncbi.nlm.nih.gov/21959131/], Bayesian networks [http://www.ncbi.nlm.nih.gov/pubmed/18989393]) and deep learning [https://academic.oup.com/bioinformatics/article/34/10/1690/4769493?login=false].
+For a protein to enter the secretory pathway, in both eukaryotic and prokaryotic cells, it must be endowed with a specific target signal. Often, this signal takes the shape of a short sequences located at the N-terminus of proteins [http://www.ncbi.nlm.nih.gov/pubmed/2197415]. The signal peptide has a distinct three-domain structure, depicted in @sp_structure, with a positively charged N-terminal region (n-region), a central hydrophobic region (h-region) and a more polar C-terminal region (c-region) containing the cleavage site [http://www.ncbi.nlm.nih.gov/pubmed/2197415]. Given their importance in many aspects of cell biology, the accurate detection of SPs is a crucial task in bioinformatics, which has been tackled before with a variety of approaches, including machine learning (SVMs [https://pubmed.ncbi.nlm.nih.gov/19470175], [https://pubmed.ncbi.nlm.nih.gov/21959131/] and Bayesian networks [http://www.ncbi.nlm.nih.gov/pubmed/18989393]) and deep learning [https://academic.oup.com/bioinformatics/article/34/10/1690/4769493?login=false].
+
+#figure(
+  image(".imgs/sp_structure.png"),
+  caption: [Signal peptide structure],
+) <sp_structure>
+
+
+
+With this work, we propose a comparative analysis of three different approaches for the detection of SPs, namely the Von-Heijne model, a Support Vector Machine (SVM) and a Multi-layer Perceptron (MLP).
 
 
 = Materials and Methods
@@ -41,10 +50,22 @@ Further selection on the positive entries was made to select proteins which had 
 
 // Initial filtering: 2960 entries to 2942
 // After clustering 1093
-For the negative set, additional information was added to the data representing the presence of a transmembrane helix, whose  hydrophobicity profile mimicks the one of a signal peptide.
-
+#figure(
+  table(
+    columns: 3,
+    align: (left, center, center),
+    [*Dataset*], [*Before Clustering*], [*After Clustering*],
+    [Positive], [2942], [1093],
+    [Negative (total)], [20806], [9028],
+    [Negative (w/o TM)], [18301], [-],
+    [Negative (with TM)], [2505], [-],
+  ),
+  caption: [Dataset sizes before and after clustering],
+)
 // 20806 total, 18301 w/o TM, 2505 with TM
 // after clustering: 9028
+
+For the negative set, additional information was added to the data representing the presence of a transmembrane helix, whose  hydrophobicity profile mimicks the one of a signal peptide.
 
 == Von-Heijne Model
 
