@@ -16,18 +16,18 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import contextlib
 import io
-
+from IPython.display import clear_output
 import src.data_collection
 import src.logo_generator
 import src.utils.AdditionalProtParamData
 import src.methods.von_heijne; importlib.reload(src.methods.von_heijne);  # noqa: E703, E702, E402 # fmt: skip
-import src.processing; importlib.reload(src.processing)  # noqa: E703, E702, E402 # fmt: skip
-import src.graphics; importlib.reload(src.graphics)  # noqa: E703, E702, E402 # fmt: skip
-import src.feature_extraction; importlib.reload(src.feature_extraction)  # noqa: E703, E702, E402 # fmt: skip
-import src.methods.svm; importlib.reload(src.methods.svm)  # noqa: E703, E702, E402 # fmt: skip
-import src.methods.mlp; importlib.reload(src.methods.mlp)  # noqa: E703, E702, E402 # fmt: skip
-import src.feature_extraction; importlib.reload(src.feature_extraction)  # noqa: E703, E702, E402 # fmt: skip
-import src.feature_importance; importlib.reload(src.feature_importance)  # noqa: E703, E702, E402 # fmt: skip
+import src.processing; importlib.reload(src.processing); clear_output()  # noqa: E703, E702, E402 # fmt: skip
+import src.graphics; importlib.reload(src.graphics); clear_output()  # noqa: E703, E702, E402 # fmt: skip
+import src.feature_extraction; importlib.reload(src.feature_extraction); clear_output()  # noqa: E703, E702, E402 # fmt: skip
+import src.methods.svm; importlib.reload(src.methods.svm); clear_output()  # noqa: E703, E702, E402 # fmt: skip
+import src.methods.mlp; importlib.reload(src.methods.mlp); clear_output()  # noqa: E703, E702, E402 # fmt: skip
+import src.feature_extraction; importlib.reload(src.feature_extraction); clear_output()  # noqa: E703, E702, E402 # fmt: skip
+import src.feature_importance; importlib.reload(src.feature_importance); clear_output()  # noqa: E703, E702, E402 # fmt: skip
 
 collector = src.data_collection.DataCollector(
     positive_query="""
@@ -67,13 +67,9 @@ collector.clean_cache()
 # (creates .data, and .imgs)
 collector.setup_wd()
 
-
-# Get the positive examples and cluster them
+# These contain information about the clusters, but there still are multiple sequences per cluster.
 all_positive = collector.cluster_df(collector.get_positive_examples())
-
-# Get the negative examples and cluster them
 all_negative = collector.cluster_df(collector.get_negative_examples())
-
 
 # positive are only the ones where accession matches cluster_id, so we have one representative per cluster
 positive = all_positive.filter(pl.col("accession") == pl.col("cluster_id"))
@@ -226,6 +222,7 @@ src.graphics.plot_confusion_matrix(
 # ██║  ██║ ██║ ╚████║ ██║  ██║ ███████╗██║    ███████║ ██║ ███████║
 # ╚═╝  ╚═╝ ╚═╝  ╚═══╝ ╚═╝  ╚═╝ ╚══════╝╚═╝    ╚══════╝ ╚═╝ ╚══════╝
 
+# Feature importance analysis using random forest importance and permutation importance on the SVM model
 
 # Compute the feature importance for the SVM model and save it as an image
 src.feature_importance.draw_feature_importance(
