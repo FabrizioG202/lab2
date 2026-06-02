@@ -40,13 +40,17 @@ With this work, we propose a comparative analysis of three different approaches 
 
 = Materials and Methods
 == Data Collection
-Protein sequences were queried from UniprotKB, and collected into 2 distinct sets, positive and negative.
+Reviewed non-fragment protein sequences from the eukaryota taxa were queried from UniprotKB, and collected into 2 distinct sets, positive and negative.
 For Positive sequences, we selected sequences having experimental evidence for the presence of a signal peptide (`ft_signal_exp:*`)
-For the negative set, proteins not annotated with a signal peptide and endowed with experimental evidence for subcellular localization in non-secretory comparments, namely nucleus (`cc_scl_term_exp:SL-0191`), peroxisome (`cc_scl_term_exp:SL-0204`), cell membrane / plasma membrane (`cc_scl_term_exp:SL-0039`), cytosol (`cc_scl_term_exp:SL-0091`), plastid (`cc_scl_term_exp:SL-0209`) or mitochondrion (`cc_scl_term_exp:SL-0173`).
+For the negative set, proteins not annotated with a signal peptide and endowed with experimental evidence for subcellular localization in non-secretory comparments, namely nucleus (`cc_scl_term_exp:SL-0191`), peroxisome (`cc_scl_term_exp:SL-0204`), cell membrane / plasma membrane (`cc_scl_term_exp:SL-0039`), cytosol (`cc_scl_term_exp:SL-0091`), plastid (`cc_scl_term_exp:SL-0209`) or mitochondrion (`cc_scl_term_exp:SL-0173`). For sequences in the negative set, we gathered information about the presence of a transmembrane helix, whose  hydrophobicity profile mimicks the one of a signal peptide.
 
-Both sets were also limited to the taxa of eukaroyot and areviewed entries, and non-fragment nature.
+Further selection on the positive entries was carried out in order to select proteins which had informaton about the cleavage site and a Signal Peptide with a length of at least 14bp.
 
-Further selection on the positive entries was made to select proteins which had informaton about the cleavage site and a Signal Peptide with a length of at least 14bp.
+== Clustering
+
+Sequences were clustered using mmseqs2 #link("https://www.nature.com/articles/nbt.3988")[ref], using parameters `--min-seq-id 0.3, cluster-mode 1 -cov-mode 0 -c 0.4`, in order to cluster sequences with a similarity of at least 30\% and an alignment spanning at least 40\% of the total sequence length. The number of sequences in the datasets is reported in @seq-counts.
+
+
 
 // Initial filtering: 2960 entries to 2942
 // After clustering 1093
@@ -57,15 +61,15 @@ Further selection on the positive entries was made to select proteins which had 
     [*Dataset*], [*Before Clustering*], [*After Clustering*],
     [Positive], [2942], [1093],
     [Negative (total)], [20806], [9028],
-    [Negative (w/o TM)], [18301], [-],
-    [Negative (with TM)], [2505], [-],
+    [Negative (w/o TM)], [18301], [8113],
+    [Negative (with TM)], [2505], [915],
   ),
   caption: [Dataset sizes before and after clustering],
-)
+)<seq-counts>
 // 20806 total, 18301 w/o TM, 2505 with TM
 // after clustering: 9028
 
-For the negative set, additional information was added to the data representing the presence of a transmembrane helix, whose  hydrophobicity profile mimicks the one of a signal peptide.
+
 
 == Von-Heijne Model
 
@@ -93,8 +97,6 @@ $
 
 The threshold was computed using 5-fold cross validation.
 
-== Clustering
-Clustering was performed using mmseqs2 [cit], using parameters `=c 0.4 --min-seq-id 0.3 --cov-mode 0 --cluster-mode 1`, giving clusters with less than 30\% pairwise identity.
 
 
 = Results

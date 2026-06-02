@@ -75,6 +75,7 @@ all_negative = collector.cluster_df(collector.get_negative_examples())
 positive = all_positive.filter(pl.col("accession") == pl.col("cluster_id"))
 negative = all_negative.filter(pl.col("accession") == pl.col("cluster_id"))
 
+
 # Add a column with the sequence neighbouring the Cleavage site.
 # ┌───────────┬───────────────────────┬──────────────────────────┐
 # │           │                       │                          │
@@ -107,8 +108,7 @@ fig = src.logo_generator.generate_logo(
     positive["motif"].to_list(),
     left_bound=K_RESIDUES_BEFORE,
     right_bound=K_RESIDUES_AFTER,
-)
-fig.savefig(".imgs/positive_logo.svg")
+).savefig("report/.imgs/positive_logo.svg")
 
 # possible aas
 ALPHABET = list("GAVPLIMFWYSTCNQHDEKR")
@@ -124,9 +124,6 @@ combined = pl.concat(
     how="diagonal",
 )
 
-# split 80% train 20% test
-combined_train, combined_test = src.processing.split_df(combined, fraction=0.8, seed=42)
-
 # ██╗   ██╗  ██████╗  ███╗   ██╗        ██╗  ██╗ ███████╗      ██╗ ███╗   ██╗ ███████╗
 # ██║   ██║ ██╔═══██╗ ████╗  ██║        ██║  ██║ ██╔════╝      ██║ ████╗  ██║ ██╔════╝
 # ██║   ██║ ██║   ██║ ██╔██╗ ██║ █████╗ ███████║ █████╗        ██║ ██╔██╗ ██║ █████╗
@@ -134,6 +131,10 @@ combined_train, combined_test = src.processing.split_df(combined, fraction=0.8, 
 #  ╚████╔╝  ╚██████╔╝ ██║ ╚████║        ██║  ██║ ███████╗ ╚█████╔╝ ██║ ╚████║ ███████╗
 #   ╚═══╝    ╚═════╝  ╚═╝  ╚═══╝        ╚═╝  ╚═╝ ╚══════╝  ╚════╝  ╚═╝  ╚═══╝ ╚══════╝
 
+# split 80% train 20% test
+combined_train, combined_test = src.processing.split_df(combined, fraction=0.8, seed=42)
+
+# Compute the PSWM on the training set, using only the positive examples with a motif (i.e. where we could extract the motif).
 pswm = src.methods.von_heijne.PSWM.compute_for(
     [m for m in combined_train["motif"].to_list() if m is not None], alphabet=ALPHABET
 )
@@ -168,37 +169,124 @@ src.graphics.plot_confusion_matrix(
 # ██╔══╝   ██╔══╝   ██╔══██║    ██║    ██║   ██║ ██╔══██╗ ██╔══╝   ╚════██║
 # ██║      ███████╗ ██║  ██║    ██║    ╚██████╔╝ ██║  ██║ ███████╗ ███████║
 # ╚═╝      ╚══════╝ ╚═╝  ╚═╝    ╚═╝     ╚═════╝  ╚═╝  ╚═╝ ╚══════╝ ╚══════╝
-
-feature_df = pl.DataFrame(
-    [
-        {
-            "accession": row["accession"],
-            "label": row["label"],
-            **src.feature_extraction.get_all_features(
-                row["sequence"],
-                alphabet=ALPHABET,
-            ),
-        }
-        for row in tqdm(
-            combined.iter_rows(named=True),
-            total=combined.height,
-            desc="Extracting features",
-        )
-    ],
+average_cut_site_position = int(
+    np.mean(combined_train["cleavage_site"].drop_nulls().to_numpy())
 )
 
-# SVM Training Pipeline
-X_df = feature_df.drop(["label", "accession"])
-X = X_df.to_numpy()
-y = feature_df["label"].to_numpy()
+best_hp = None
+best_f1 = -1.0
 
-X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
-    X,
-    y,
-    test_size=0.2,
-    random_state=42,
-    stratify=y,
-)
+for cutoff, model in tqdm(
+    src.feature_extraction.get_all_hp_combinations(
+        average_cut_position=average_cut_site_position
+    )[:5],
+    position=0,
+):
+    feature_df = pl.DataFrame(
+        [
+            {
+                "accession": row["accession"],
+                "label": row["label"],
+                #
+                # composition up to cutoff
+                **src.feature_extraction.FeatureExtractor(
+                    row["sequence"][:90]
+                ).get_c_term_composition(cutoff=cutoff),
+                #
+                # composition from cutoff
+                **src.feature_extraction.FeatureExtractor(
+                    row["sequence"][:90]
+                ).get_n_term_composition(cutoff=cutoff),
+                #
+                # kd scale up to cutoff
+                **src.feature_extraction.FeatureExtractor(
+                    row["sequence"][:90]
+                ).get_n_term_feature_described(
+                    cutoff=cutoff,
+                    scale=Bio.SeqUtils.ProtParamData.kd,
+                    scale_name="kd",
+                    window_size=5,
+                ),
+                #
+                # kd scale after cutoff
+                **src.feature_extraction.FeatureExtractor(
+                    row["sequence"][:90]
+                ).get_c_term_feature_described(
+                    cutoff=cutoff,
+                    scale=Bio.SeqUtils.ProtParamData.kd,
+                    scale_name="kd",
+                    window_size=5,
+                ),
+                #
+                # global alpha-helix tendency
+                **src.feature_extraction.FeatureExtractor(
+                    row["sequence"][:90]
+                ).get_feature_described(
+                    scale=src.utils.AdditionalProtParamData.alpha_helix_tendency,
+                    scale_name="alpha_helix_tendency",
+                    window_size=5,
+                ),
+                #
+                # global transmembrane tendency
+                **src.feature_extraction.FeatureExtractor(
+                    row["sequence"][:90]
+                ).get_feature_described(
+                    scale=src.utils.AdditionalProtParamData.transmemberane_tendency,
+                    scale_name="transmembrane_tendency",
+                    window_size=5,
+                ),
+                #
+                # global bulkiness
+                **src.feature_extraction.FeatureExtractor(
+                    row["sequence"][:90]
+                ).get_feature_described(
+                    scale=src.utils.AdditionalProtParamData.bulkiness,
+                    scale_name="bulkiness",
+                    window_size=5,
+                ),
+                #
+                # global polarity
+                **src.feature_extraction.FeatureExtractor(
+                    row["sequence"][:90]
+                ).get_feature_described(
+                    scale=src.utils.AdditionalProtParamData.polarity,
+                    scale_name="polarity",
+                    window_size=5,
+                ),
+            }
+            for row in combined.iter_rows(named=True)
+        ],
+    )
+
+    # Extract the features
+    X_df = feature_df.drop(["label", "accession"])
+    X = X_df.to_numpy()
+    y = feature_df["label"].to_numpy()
+
+    best_model: sklearn.base.BaseEstimator = None  # ty:ignore[invalid-assignment]
+    best_f1 = -1.0
+
+    # split 80% train 20% test
+    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    # CV on the training set to find the best hyperparameters for the model
+    cv_results = sklearn.model_selection.cross_validate(
+        model,
+        X_train,
+        y_train,
+        cv=5,
+        scoring="f1",
+        return_train_score=False,
+    )
+
+    mean_f1 = np.mean(cv_results["test_score"])
+
+    if mean_f1 > best_f1:
+        best_f1 = mean_f1
+        best_hp = (cutoff, model)
+
 
 # ███████╗ ██╗   ██╗ ███╗   ███╗
 # ██╔════╝ ██║   ██║ ████╗ ████║
@@ -207,7 +295,7 @@ X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
 # ███████║  ╚████╔╝  ██║ ╚═╝ ██║
 # ╚══════╝   ╚═══╝   ╚═╝     ╚═╝
 
-best_svm_model, _ = src.methods.svm.fit_svm(X_train, y_train)
+# best_svm_model, _ = src.methods.svm.fit_svm(X_train, y_train)
 
 # Save the confusion matrix computed on the test set as an image
 src.graphics.plot_confusion_matrix(

@@ -18,7 +18,7 @@ from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from tqdm import tqdm
 
 
-def fit_svm(x_train: pl.DataFrame, y_train: pl.Series) -> tuple[sklearn.svm.SVC, float]:
+def get_svm_models(x_train: pl.DataFrame, y_train: pl.Series) -> list[sklearn.svm.SVC]:
     pipeline = sklearn.pipeline.Pipeline(
         [
             ("scaler", sklearn.preprocessing.StandardScaler()),
@@ -38,12 +38,13 @@ def fit_svm(x_train: pl.DataFrame, y_train: pl.Series) -> tuple[sklearn.svm.SVC,
         },
     ]
 
-    cv = sklearn.model_selection.StratifiedKFold(
-        n_splits=5, shuffle=True, random_state=42
-    )
+    # cv = sklearn.model_selection.StratifiedKFold(
+    #     n_splits=5, shuffle=True, random_state=42
+    # )
 
-    best_score = -np.inf
-    best_model = None
+    # best_score = -np.inf
+    # best_model = None
+    models = []
 
     # Manual CV validation so that we can use tqdm to track the progress of the search.
     for params in tqdm(
@@ -52,16 +53,19 @@ def fit_svm(x_train: pl.DataFrame, y_train: pl.Series) -> tuple[sklearn.svm.SVC,
         model = sklearn.base.clone(pipeline)
         model.set_params(**params)
 
-        scores = sklearn.model_selection.cross_val_score(
-            model, x_train, y_train, cv=cv, scoring="f1_macro", n_jobs=-1
-        )
+        models.append(model)
+    return models
+    # scores = sklearn.model_selection.cross_val_score(
+    #     model, x_train, y_train, cv=cv, scoring="f1_macro", n_jobs=-1
+    # )
 
-        mean_score = scores.mean()
+    # mean_score = scores.mean()
 
-        if mean_score > best_score:
-            best_score = mean_score
-            best_model = sklearn.base.clone(pipeline).set_params(**params)
+    # if mean_score > best_score:
+    #     best_score = mean_score
+    #     best_model = sklearn.base.clone(pipeline).set_params(**params)
 
-    _ = best_model.fit(x_train, y_train)  # ty:ignore[unresolved-attribute]
+    # _ = best_model.fit(x_train, y_train)  # ty:ignore[unresolved-attribute]
 
-    return best_model, best_score
+    # return best_model, best_score
+    #
