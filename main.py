@@ -198,21 +198,11 @@ for cutoff, model in tqdm(
                     row["sequence"][:90]
                 ).get_n_term_composition(cutoff=cutoff),
                 #
-                # kd scale up to cutoff
-                **src.feature_extraction.FeatureExtractor(
-                    row["sequence"][:90]
-                ).get_n_term_feature_described(
-                    cutoff=cutoff,
-                    scale=Bio.SeqUtils.ProtParamData.kd,
-                    scale_name="kd",
-                    window_size=5,
-                ),
                 #
-                # kd scale after cutoff
+                # global hydrophobicity
                 **src.feature_extraction.FeatureExtractor(
                     row["sequence"][:90]
-                ).get_c_term_feature_described(
-                    cutoff=cutoff,
+                ).get_feature_described(
                     scale=Bio.SeqUtils.ProtParamData.kd,
                     scale_name="kd",
                     window_size=5,

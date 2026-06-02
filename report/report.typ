@@ -93,11 +93,17 @@ $
   )
 $
 
-==
+The optimal threshold for the dataset was computed using 5-fold cross validation.
 
-The threshold was computed using 5-fold cross validation.
+== Feature Extraction
+To build a model that can deal with sequences, they must be encoded into numerical representation. To do so, we extracted numerical feature values from the sequence. We used 2 kinds of features:
+- Aminoacid composition up to a cutoff $k$ (`n_term_composition`) and from $k$ to an hardcoded limit (set to $90$) (`c_term_composition`)
+- Protein Scales computed on the first $90$ aminoacids with a window size of $5$. An Hydrophobicity scale (cit), alpha-helix tendency scale (cit), transmembrane tendency (cit), bulkiness (cit), and polarity (cit) were used.
 
+We found an optimized value for for the hyperparameter $k$ by optimizing the f1 score using a grid search, performed on a list of putative cutoffs, centered around the average cutoff position, which for the dataset was 22.
 
+== Support Vector Machine
+We used a grid search to find optimal hyperparameters, testing both RBF and linear kernels. For the RBF kernel, we evaluated C values of 0.1, 1, 10, and 100, combined with gamma values of "scale", 0.001, 0.01, 0.1, and 1. For the linear kernel, we tested C values of 0.1, 1, 10, and 100.
 
 = Results
 == SP Motifs
@@ -109,6 +115,11 @@ From all SP-Endowed sequences, a motif logo was generated using the context arou
     caption: [Motif logo for the context (-13bp to 2bp) surrounding the cleavage site],
   )<sp_motif>,])
 
-For the Von-Hejne model the computed optimal threshold was $9.25$.
-// Image for the confusion matrix.
+For the Von-Hejne model the computed optimal threshold was $9.25$, confusion matrix for the test set is reported in @vh-confusion-matrix.
+
+#figure(
+  image(".imgs/von_heijne_confusion_matrix.svg"),
+  caption: [Confusion matrix for the Von-Heijne model],
+) <vh-confusion-matrix>
+
 
