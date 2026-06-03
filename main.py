@@ -31,56 +31,8 @@ import src.methods.mlp; importlib.reload(src.methods.mlp); clear_output()  # noq
 import src.feature_extraction; importlib.reload(src.feature_extraction); clear_output()  # noqa: E703, E702, E402 # fmt: skip
 import src.feature_importance; importlib.reload(src.feature_importance); clear_output()  # noqa: E703, E702, E402 # fmt: skip
 
-collector = src.data_collection.DataCollector(
-    positive_query="""
-    (
-        (taxonomy_id:2759)
-        AND (reviewed:true)
-        AND (ft_signal_exp:*)
-        AND (fragment:false)
-        AND (length:[40 TO *])
-        AND (existence:1)
-    )
-    """,
-    negative_query="""
-    (
-        (reviewed:true)
-        AND (fragment:false)
-        AND (taxonomy_id:2759)
-        AND (length:[40 TO *])
-        AND (existence:1)
-        AND NOT (ft_signal:*)
-        AND (
-            (cc_scl_term_exp:SL-0191)
-            OR (cc_scl_term_exp:SL-0204)
-            OR (cc_scl_term_exp:SL-0039)
-            OR (cc_scl_term_exp:SL-0091)
-            OR (cc_scl_term_exp:SL-0209)
-            OR (cc_scl_term_exp:SL-0173)
-        )
-    )
-    """,
-)
-
-# (if necessary, clean the cache)
-collector.clean_cache()
-
-# Setup the working director for the project
-# (creates .data, and .imgs)
-collector.setup_wd()
-
-# These contain information about the clusters, but there still are multiple sequences per cluster.
-all_positive = collector.cluster_df(
-    lambda: collector.get_positive_examples(), "positive"
-)
-all_negative = collector.cluster_df(
-    lambda: collector.get_negative_examples(), "negative"
-)
-
-# positive are only the ones where accession matches cluster_id, so we have one representative per cluster
-positive = all_positive.filter(pl.col("accession") == pl.col("cluster_id"))
-negative = all_negative.filter(pl.col("accession") == pl.col("cluster_id"))
-
+# collect data
+all_positive, all_negative, positive, negative = src.data_collection.collect_data()
 
 # Add a column with the sequence neighbouring the Cleavage site.
 # ┌───────────┬───────────────────────┬──────────────────────────┐

@@ -11,7 +11,6 @@ import requests
 from Bio import SeqIO
 from Bio.Align import parse
 from debugpy.launcher.debuggee import process
-from numpy import positive
 from parso.python.tree import Literal
 from requests.adapters import HTTPAdapter, Retry
 from sklearn.model_selection import train_test_split
@@ -289,3 +288,68 @@ class DataCollector:
                     ]
                 )
             )
+
+
+def collect_data(
+    purge_cache: bool = False,
+) -> tuple[
+    pl.DataFrame,
+    pl.DataFrame,
+    pl.DataFrame,
+    pl.DataFrame,
+]:
+    """Setups the data for the pipeline"""
+    collector = DataCollector(
+        positive_query="""
+        (
+            (taxonomy_id:2759)
+            AND (reviewed:true)
+            AND (ft_signal_exp:*)
+            AND (fragment:false)
+            AND (length:[40 TO *])
+            AND (existence:1)
+        )
+        """,
+        negative_query="""
+        (
+            (reviewed:true)
+            AND (fragment:false)
+            AND (taxonomy_id:2759)
+            AND (length:[40 TO *])
+            AND (existence:1)
+            AND NOT (ft_signal:*)
+            AND (
+                (cc_scl_term_exp:SL-0191)
+                OR (cc_scl_term_exp:SL-0204)
+                OR (cc_scl_term_exp:SL-0039)
+                OR (cc_scl_term_exp:SL-0091)
+                OR (cc_scl_term_exp:SL-0209)
+                OR (cc_scl_term_exp:SL-0173)
+            )
+        )
+        """,
+    )
+
+    # (if necessary, clean the cache)
+    if purge_cache:
+        collector.clean_cache()
+
+    # Setup the working director for the project
+    # (creates .data, and .imgs)
+    collector.setup_wd()
+
+    # These contain information about the clusters, but there still are multiple sequences per cluster.
+    all_positive = collector.cluster_df(
+        lambda: collector.get_positive_examples(),
+        cache_prefix="positive",
+    )
+    all_negative = collector.cluster_df(
+        lambda: collector.get_negative_examples(),
+        cache_prefix="negative",
+    )
+
+    # positive are only the ones where accession matches cluster_id, so we have one representative per cluster
+    positive = all_positive.filter(pl.col("accession") == pl.col("cluster_id"))
+    negative = all_negative.filter(pl.col("accession") == pl.col("cluster_id"))
+
+    return all_positive, all_negative, positive, negative
