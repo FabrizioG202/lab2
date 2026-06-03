@@ -62,7 +62,7 @@ class PSWM:
                 # Normalize by the number of sequences and 20 pseudocounts
                 (pswm / (len(motifs) + 20))
                 / [
-                    src.utils.AdditionalProtParamData.swissprot_composition_2[aa]
+                    src.utils.AdditionalProtParamData.swissprot_composition[aa]
                     for aa in alphabet
                 ],
             ),

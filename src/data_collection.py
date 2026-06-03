@@ -4,7 +4,7 @@ import re
 import subprocess
 import tempfile
 import warnings
-from typing import Self
+from typing import Callable, Self
 
 import polars as pl
 import requests
@@ -176,10 +176,26 @@ class DataCollector:
 
         return df
 
-    def cluster_df(self: Self, df: pl.DataFrame) -> pl.DataFrame:
+    def cluster_df(
+        self: Self,
+        get_df: Callable[[], pl.DataFrame],
+        cache_prefix: str,
+        ignore_cache: bool = False,
+    ) -> pl.DataFrame:
         """
         Cluster the sequences in the dataframe using mmseqs2 and add a column with the cluster id.
         """
+        cache_file = f".data/{cache_prefix}.clustered.tsv"
+
+        # Check if cached data exists
+        if not ignore_cache and os.path.exists(cache_file):
+            print(
+                "Using cached clustered data. Set ignore_cache=True to fetch new data from UniProt."
+            )
+            return pl.read_csv(cache_file, separator="\t")
+
+        # get the dataframe
+        df = get_df()
 
         tmp_fasta_path = ".data/tmp.fasta"
         with open(tmp_fasta_path, "w", encoding="utf8") as tmp_fasta:
@@ -229,6 +245,10 @@ class DataCollector:
         os.remove(tmp_fasta.name + "_clustered_all_seqs.fasta")
         os.remove(tmp_fasta.name + "_clustered_rep_seq.fasta")
         os.remove(tmp_fasta.name)
+
+        # save the clustered data to cache
+        df.write_csv(cache_file, separator="\t")
+        print(f"Clustered data saved to {cache_file}")
 
         return df
 

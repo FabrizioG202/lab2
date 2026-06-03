@@ -1,3 +1,5 @@
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import Bio.SeqUtils.ProtParamData
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
@@ -17,9 +19,9 @@ import plotly.io as pio
 import contextlib
 import io
 from IPython.display import clear_output
-import src.data_collection
-import src.logo_generator
-import src.utils.AdditionalProtParamData
+import src.data_collection; importlib.reload(src.data_collection); clear_output()  # noqa: E703, E702, E402 # fmt: skip
+import src.logo_generator; importlib.reload(src.logo_generator); clear_output()  # noqa: E703, E702, E402 # fmt: skip
+import src.utils.AdditionalProtParamData; importlib.reload(src.utils.AdditionalProtParamData); clear_output()  # noqa: E703, E702, E402 # fmt: skip
 import src.methods.von_heijne; importlib.reload(src.methods.von_heijne);  # noqa: E703, E702, E402 # fmt: skip
 import src.processing; importlib.reload(src.processing); clear_output()  # noqa: E703, E702, E402 # fmt: skip
 import src.graphics; importlib.reload(src.graphics); clear_output()  # noqa: E703, E702, E402 # fmt: skip
@@ -60,7 +62,7 @@ collector = src.data_collection.DataCollector(
     """,
 )
 
-
+# (if necessary, clean the cache)
 collector.clean_cache()
 
 # Setup the working director for the project
@@ -68,8 +70,12 @@ collector.clean_cache()
 collector.setup_wd()
 
 # These contain information about the clusters, but there still are multiple sequences per cluster.
-all_positive = collector.cluster_df(collector.get_positive_examples())
-all_negative = collector.cluster_df(collector.get_negative_examples())
+all_positive = collector.cluster_df(
+    lambda: collector.get_positive_examples(), "positive"
+)
+all_negative = collector.cluster_df(
+    lambda: collector.get_negative_examples(), "negative"
+)
 
 # positive are only the ones where accession matches cluster_id, so we have one representative per cluster
 positive = all_positive.filter(pl.col("accession") == pl.col("cluster_id"))
@@ -276,6 +282,21 @@ for cutoff, model in tqdm(
     if mean_f1 > best_f1:
         best_f1 = mean_f1
         best_hp = (cutoff, model)
+
+sequences = combined["sequence"].to_list()
+labels = combined["label"].to_list()
+
+X_train, X_test, y_train, y_test = train_test_split(
+    sequences, labels, test_size=0.2, stratify=labels, random_state=42
+)
+
+vectorizer = TfidfVectorizer(analyzer="char", ngram_range=(3, 6), min_df=2)
+
+X_train_vec = vectorizer.fit_transform(X_train)
+X_test_vec = vectorizer.transform(X_test)
+
+model = sklearn.svm.SVC(kernel="rbf", C=1, gamma="scale")
+model.fit(X_train_vec, y_train)
 
 
 # ███████╗ ██╗   ██╗ ███╗   ███╗

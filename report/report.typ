@@ -100,10 +100,12 @@ To build a model that can deal with sequences, they must be encoded into numeric
 - Aminoacid composition up to a cutoff $k$ (`n_term_composition`) and from $k$ to an hardcoded limit (set to $90$) (`c_term_composition`)
 - Protein Scales computed on the first $90$ aminoacids with a window size of $5$. An Hydrophobicity scale (cit), alpha-helix tendency scale (cit), transmembrane tendency (cit), bulkiness (cit), and polarity (cit) were used.
 
-We found an optimized value for for the hyperparameter $k$ by optimizing the f1 score using a grid search, performed on a list of putative cutoffs, centered around the average cutoff position, which for the dataset was 22.
+For this experiment, $k$ was chosen to be the average position of the cut site, roughly 22.
 
 == Support Vector Machine
 We used a grid search to find optimal hyperparameters, testing both RBF and linear kernels. For the RBF kernel, we evaluated C values of 0.1, 1, 10, and 100, combined with gamma values of "scale", 0.001, 0.01, 0.1, and 1. For the linear kernel, we tested C values of 0.1, 1, 10, and 100.
+
+==
 
 = Results
 == SP Motifs
