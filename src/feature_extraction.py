@@ -12,6 +12,8 @@ import sklearn.model_selection
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from scipy.constants import g
 
+import src.utils.AdditionalProtParamData
+
 
 class FeatureExtractor:
     sequence: str
@@ -66,6 +68,46 @@ class FeatureExtractor:
             )
 
         return values
+
+    # Returns all the features for the `self.sequence`, to be used
+    # with the svm model
+    def get_all_features(self, k: int, n: int):
+        features = {}
+        features.update(self.get_n_term_composition(cutoff=k))
+        features.update(self.get_c_term_composition(cutoff=k))
+        features.update(
+            {
+                # Kd hydrophobicity scale
+                **self.get_feature_described(
+                    Bio.SeqUtils.ProtParamData.kd, window_size=n, scale_name="kd"
+                ),
+                # alpha-helix tendency scale
+                **self.get_feature_described(
+                    src.utils.AdditionalProtParamData.alpha_helix_tendency,
+                    window_size=n,
+                    scale_name="alpha",
+                ),
+                # transmembrane tendency
+                **self.get_feature_described(
+                    src.utils.AdditionalProtParamData.transmembrane_tendency,
+                    window_size=n,
+                    scale_name="tm",
+                ),
+                # bulkiness
+                **self.get_feature_described(
+                    src.utils.AdditionalProtParamData.bulkiness,
+                    window_size=n,
+                    scale_name="bulkiness",
+                ),
+                # polarity
+                **self.get_feature_described(
+                    src.utils.AdditionalProtParamData.polarity,
+                    window_size=n,
+                    scale_name="polarity",
+                ),
+            }
+        )
+        return features
 
 
 def _generate_feature_extraction_image():

@@ -45,7 +45,7 @@ swissprot_composition = {
     "V": 0.0685,
 }
 
-transmemberane_tendency = {
+transmembrane_tendency = {
     "A": 0.38,
     "R": -2.57,
     "N": -1.62,

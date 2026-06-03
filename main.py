@@ -179,7 +179,7 @@ for cutoff, model in tqdm(
                 **src.feature_extraction.FeatureExtractor(
                     row["sequence"][:90]
                 ).get_feature_described(
-                    scale=src.utils.AdditionalProtParamData.transmemberane_tendency,
+                    scale=src.utils.AdditionalProtParamData.transmembrane_tendency,
                     scale_name="transmembrane_tendency",
                     window_size=5,
                 ),

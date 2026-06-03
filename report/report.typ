@@ -97,14 +97,14 @@ The optimal threshold for the dataset was computed using 5-fold cross validation
 
 == Feature Extraction
 To build a model that can deal with sequences, they must be encoded into numerical representation. To do so, we extracted numerical feature values from the sequence. We used 2 kinds of features:
-- Aminoacid composition up to a cutoff $k$ (`n_term_composition`) and from $k$ to an hardcoded limit (set to $90$) (`c_term_composition`)
-- Protein Scales computed on the first $90$ aminoacids with a window size of $5$ (@feature-example). An Hydrophobicity scale (cit), alpha-helix tendency scale (cit), transmembrane tendency (cit), bulkiness (cit), and polarity (cit) were used.
+- Aminoacid composition up to a cutoff $k$ (`n_term_composition`) and from $k$ to an hardcoded limit $N$ (set to $90$) (`c_term_composition`)
+- Protein Scales computed on the first $N$ aminoacids with a window size of $5$ (@feature-example). An Hydrophobicity scale (cit), alpha-helix tendency scale (cit), transmembrane tendency (cit), bulkiness (cit), and polarity (cit) were used.
 
 For this experiment, $k$ was chosen to be the average position of the cut site, roughly 22 aminoacids from the N-Terminus.
 
 #figure(
   image(".imgs/feature_extraction_example.svg"),
-  caption: [Confusion matrix for the Von-Heijne model],
+  caption: [Example of feature extraction for a given sequence. Protein scales are computed on the first $N$ aminoacids with a window size of 5],
 ) <feature-example>
 
 
