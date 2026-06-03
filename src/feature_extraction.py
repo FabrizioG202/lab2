@@ -127,6 +127,7 @@ def _generate_feature_extraction_image():
         yaxis_title="Hydrophobicity",
     )
     fig.show()
+    fig.write_image("../report/.imgs/feature_extraction_example.svg")
 
 
-_generate_feature_extraction_image()
+# _generate_feature_extraction_image()
