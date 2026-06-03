@@ -1,36 +1,20 @@
 import contextlib
 import io
 import itertools
-from this import s
 from typing import Any
 
 import Bio.SeqUtils.ProtParamData
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio
 import sklearn.model_selection
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
+from scipy.constants import g
 
 
 class FeatureExtractor:
     sequence: str
-
-    @staticmethod
-    def putative_cutoffs(
-        average_cut_position: int,
-        step: int = 4,
-        first_position: int = 6,
-        last_position: int = 40,
-    ):
-        # similar to a linspace, but ensures that the average_cut_position
-        # is included and that the step is consistent
-        return list(
-            set(
-                list(range(first_position, average_cut_position, step))
-                + [average_cut_position]
-                + list(range(average_cut_position + step, last_position, step))
-            )
-        )
 
     def __init__(self, sequence: str):
         self.sequence = sequence
@@ -55,51 +39,94 @@ class FeatureExtractor:
             for aa, v in self._get_aa_composition(self.sequence[cutoff:]).items()
         }
 
-    @staticmethod
-    def _get_feature_described(
-        sequence: str, scale: dict[str, float], window_size: int, scale_name: str
-    ) -> dict[str, int | float]:
+    def get_feature_described(
+        self, scale: dict[str, float], window_size: int, scale_name: str
+    ) -> dict[str, int | float | Any]:
 
+        values = self.get_feature(scale, window_size)
+        return {
+            f"{scale_name}_mean": np.mean(values),
+            f"{scale_name}_std": np.std(values),
+            f"{scale_name}_min": np.min(values),
+            f"{scale_name}_max": np.max(values),
+            f"{scale_name}_max_pos": int(np.argmax(values)),
+        }
+
+    def get_feature(
+        self,
+        scale: dict[str, float],
+        window_size: int,
+    ) -> list[float]:
         # This is a bit of an hack to prevent noise in the terminal
         # since protein_scale complains about non-standard aminoacids.
         with contextlib.redirect_stderr(io.StringIO()):
-            values = ProteinAnalysis(sequence).protein_scale(
+            values = ProteinAnalysis(self.sequence).protein_scale(
                 scale,
                 window=window_size,
             )
-            return {
-                f"{scale_name}_mean": np.mean(values),
-                f"{scale_name}_std": np.std(values),
-                f"{scale_name}_min": np.min(values),
-                f"{scale_name}_max": np.max(values),
-                f"{scale_name}_max_pos": int(np.argmax(values)),
-            }
 
-    def get_feature_described(
-        self, scale: dict[str, float], window_size: int, scale_name: str
-    ) -> dict[str, int | float]:
-        return self._get_feature_described(
-            self.sequence,
-            scale,
-            window_size,
-            scale_name,
+        return values
+
+
+def _generate_feature_extraction_image():
+    example_sequence = "MKTAYIAKQRQISFVKSHFSRQDILDLWIYHTQGYFPDWQNYTPGPGIRYPLKFRT"
+    extractor = FeatureExtractor(example_sequence)
+
+    values = extractor.get_feature(Bio.SeqUtils.ProtParamData.kd, window_size=5)
+    described_features = extractor.get_feature_described(
+        Bio.SeqUtils.ProtParamData.kd, window_size=5, scale_name="kd"
+    )
+    pio.renderers.default = "png"
+
+    # plot values as a line plot
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=list(range(len(values))),
+            y=values,
+            mode="lines",
+            name="Kyte-Doolittle hydrophobicity",
         )
+    )
 
-    def get_n_term_feature_described(
-        self, scale: dict[str, float], window_size: int, cutoff: int, scale_name: str
-    ) -> dict[str, int | float]:
+    # Add horizontal lines for mean, min, max
+    fig.add_hline(
+        y=described_features["kd_mean"],
+        line_dash="dash",
+        line_color="green",
+        annotation_text="Mean",
+    )
+    fig.add_hline(
+        y=described_features["kd_min"],
+        line_dash="dash",
+        line_color="blue",
+        annotation_text="Min",
+    )
+    fig.add_hline(
+        y=described_features["kd_max"],
+        line_dash="dash",
+        line_color="red",
+        annotation_text="Max",
+    )
 
-        return self._get_feature_described(
-            self.sequence[:cutoff],
-            scale,
-            window_size,
-            scale_name,
-        )
+    # Add vertical line for max position
+    fig.add_vline(
+        x=described_features["kd_max_pos"],
+        line_dash="dash",
+        line_color="orange",
+        annotation_text="Max Pos",
+    )
+    fig.add_vline(
+        x=22,
+        line_color="yellow",
+        annotation_text="Average Cut Position",
+    )
 
-    def get_c_term_feature_described(
-        self, scale: dict[str, float], window_size: int, cutoff: int, scale_name: str
-    ) -> dict[str, int | float]:
+    fig.update_layout(
+        xaxis_title="Windowed Position in sequence",
+        yaxis_title="Hydrophobicity",
+    )
+    fig.show()
 
-        return self._get_feature_described(
-            self.sequence[cutoff:], scale, window_size, scale_name
-        )
+
+_generate_feature_extraction_image()
