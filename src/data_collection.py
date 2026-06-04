@@ -325,7 +325,7 @@ def plot_lengths(
     )
 
     fig.update_layout(
-        title="Sequence Length Distribution",
+        # title="Sequence Length Distribution",
         xaxis_title="Sequence length",
         yaxis_title="Normalized count",
         barmode="overlay",
@@ -370,7 +370,7 @@ def plot_kingdom_distribution(
         )
 
     fig.update_layout(
-        title="Kingdom distribution of positive and negative datasets",
+        # title="Kingdom distribution of positive and negative datasets",
         grid=dict(rows=1, columns=2),
         annotations=[
             dict(text="Positive", x=0.20, y=1.08, showarrow=False),
@@ -405,7 +405,7 @@ def plot_cleaved_region_lengths(positive: pl.DataFrame) -> go.Figure:
     )
 
     fig.update_layout(
-        title="Length distribution of the cleaved region",
+        # title="Length distribution of the cleaved region",
         xaxis_title="Cleaved region length",
         yaxis_title="Count",
         showlegend=False,
