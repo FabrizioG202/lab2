@@ -269,7 +269,6 @@ selected_features = set(
     permutation_importance["feature"].head(5).to_list()
     + random_forest_importance["feature"].head(5).to_list()
 )
-selected_features
 X_reduced_df = X_df.select(selected_features)
 X_reduced = X_reduced_df.to_numpy()
 
@@ -283,45 +282,19 @@ X_reduced_train, X_reduced_test, y_reduced_train, y_reduced_test = (
     )
 )
 
-reduced_best_model, reduced_best_cv_f1 = find_model_by_cv(
+reduced_best_model, _ = find_model_by_cv(
     X_reduced_train,
     y_reduced_train,
 )
-reduced_best_model = cast(ClassifierEstimator, reduced_best_model)
-_ = reduced_best_model.fit(X_reduced_train, y_reduced_train)
+_ = reduced_best_model.fit(X_reduced_train, y_reduced_train)  # ty:ignore[unresolved-attribute]
 
 reduced_svm_confusion_matrix = src.graphics.ConfusionMatirx(
     sklearn.metrics.confusion_matrix(
         y_reduced_test,
-        reduced_best_model.predict(X_reduced_test),
+        reduced_best_model.predict(X_reduced_test),  # ty:ignore[unresolved-attribute]
     )
 )
-print(f"Reduced SVM best CV f1: {reduced_best_cv_f1:.4f}")
 print(reduced_svm_confusion_matrix.describe())
 reduced_svm_confusion_matrix.plot().write_image(
-    "report/.imgs/svm_confusion_matrix_top5_permutation.svg"
+    "report/.imgs/reduced_svm_confusion_matrix.svg"
 )
-
-
-# ███╗   ███╗ ██╗      ██████╗
-# ████╗ ████║ ██║      ██╔══██╗
-# ██╔████╔██║ ██║      ██████╔╝
-# ██║╚██╔╝██║ ██║      ██╔═══╝
-# ██║ ╚═╝ ██║ ███████╗ ██║
-# ╚═╝     ╚═╝ ╚══════╝ ╚═╝
-
-mlp_model = MLPClassifier(
-    hidden_layer_sizes=(100, 50),
-    max_iter=1000,
-    random_state=42,
-    early_stopping=True,
-    validation_fraction=0.1,
-)
-
-# fit on the training set
-mlp_model.fit(X_train, y_train)
-
-# compute the confusion matrix for the MLP model on the test set and save it as an image
-src.graphics.plot_confusion_matrix(
-    sklearn.metrics.confusion_matrix(y_test, mlp_model.predict(X_test))
-).write_image("report/.imgs/mlp_confusion_matrix.svg")

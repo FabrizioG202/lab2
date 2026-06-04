@@ -149,8 +149,19 @@ From all SP-Endowed sequences, a motif logo (@sp_motif) was generated using the 
 
 For the Von-Hejne model the computed optimal threshold was $9.25$, confusion matrix computed on the test set is reported in @vh-confusion-matrix. The model achieved an accuracy of $0.9378$, precision of $0.7474$, recall of $0.6532$, F1 score of $0.6971$, and MCC of $0.6645$. The model thus reaches an high accuracy, but performance on the positive class is limited, detecting only around 65% of actual positives.
 
+#figure(
+  image(".imgs/von_heijne_confusion_matrix.svg"),
+  caption: [Confusion matrix for the Von-Heijne model],
+) <vh-confusion-matrix>
+
 == Support Vector Machine
 The model, as chosen in the hyperparameter tuning phase, is a SVM with RBF kernel, $C=2$ and $gamma=0.01$. The confusion matrix computed on the test set is reported in @svm-confusion-matrix. The model achieved an accuracy of $0.9743$, precision of $0.9034$, recall of $0.8539$, F1 score of $0.8779$, and MCC of $0.8640$. The SVM model thus outperforms the Von-Heijne model across all metrics, showing particularly strong improvement in recall (85.39% vs 65.32%), indicating better detection of signal peptides. This means that the SVM model is both more reliable when predicting positives and much better at detecring actual positive cases. It is worth noting that this increase in performance mirrors a great increase in complexity of the underlying method, which is structurally more complex than a simple PSWM, and also requires far greater preprocessing to compute the features. To mitigate this, we tried producing a reduced model, using only the top 5 features selected using permutation importance.
+
+#figure(
+  image(".imgs/reduced_svm_confusion_matrix.svg"),
+  caption: [Confusion matrix for the reduced SVM model],
+) <reduced-svm-confusion-matrix>
+
 
 === Feature Importance <feature-importance>
 In order to understand which features contribute the most to the ability of our model to classify sequences, we employed two methods. As a first test, we assesed permutation importance, where values of each feature are randomly shuffled in order to break their relationship with the target label, using the drop in the classifier accuracy as a proxy for the importance of the feature. As a second test, we trained a Random Forest Classifier with $500$ classifiers and exploited the model's own feature importance, which is computed as a result of the training process.
@@ -195,6 +206,7 @@ We then trained a reduced model, using the combination of 5 most important featu
 - `tm_max`: Maximum transmembrane tendency
 - `tm_max_pos`: Position of maximum transmembrane tendency
 
+A model was selected using the same method used to select the full model, including the same pool of possible classificators. The reduced model achieved an accuracy of $0.9521$, precision of $0.8177$, recall of $0.7169$, F1 score of $0.7640$, and MCC of $0.7394$. The confusion matrix computed on the test set is reported in @reduced-svm-confusion-matrix. While this represents a decrease in performance compared to the full SVM model (F1 score of 0.8779 vs 0.7640), the reduced model still outperforms the Von-Heijne model (F1 score of 0.6971) while using only 7 features instead of the full feature set.
 
 
 #figure(
@@ -203,9 +215,7 @@ We then trained a reduced model, using the combination of 5 most important featu
 ) <svm-confusion-matrix>
 
 
-#figure(
-  image(".imgs/von_heijne_confusion_matrix.svg"),
-  caption: [Confusion matrix for the Von-Heijne model],
-) <vh-confusion-matrix>
+
+
 
 
