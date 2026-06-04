@@ -1,26 +1,63 @@
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 import plotly.io as pio
 
 
+class ConfusionMatirx:
+    def __init__(self, confusion_matrix: np.ndarray):
+        self.confusion_matrix = confusion_matrix
+
+    @property
+    def accuracy(self) -> float:
+        tn, fp, fn, tp = self.confusion_matrix.ravel()
+        return (tp + tn) / (tp + tn + fp + fn)
+
+    @property
+    def precision(self) -> float:
+        tn, fp, fn, tp = self.confusion_matrix.ravel()
+        return tp / (tp + fp) if (tp + fp) else 0.0
+
+    @property
+    def recall(self) -> float:
+        tn, fp, fn, tp = self.confusion_matrix.ravel()
+        return tp / (tp + fn) if (tp + fn) else 0.0
+
+    @property
+    def f1(self) -> float:
+        precision = self.precision
+        recall = self.recall
+        return (
+            2 * (precision * recall) / (precision + recall)
+            if (precision + recall)
+            else 0.0
+        )
+
+    @property
+    def mcc(self) -> float:
+        tn, fp, fn, tp = self.confusion_matrix.ravel()
+        denominator = np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+        return ((tp * tn) - (fp * fn)) / denominator if denominator else 0.0
+
+    def plot(self) -> "go.Figure":
+        return plot_confusion_matrix(self.confusion_matrix)
+
+    def describe(self) -> str:
+        return (
+            f"Accuracy: {self.accuracy:.4f}\n"
+            f"Precision: {self.precision:.4f}\n"
+            f"Recall: {self.recall:.4f}\n"
+            f"F1 Score: {self.f1:.4f}\n"
+            f"MCC: {self.mcc:.4f}"
+        )
+
+
 # plot confusion matrix using plotly
-def plot_confusion_matrix(confusion_matrix: np.ndarray) -> "go.Figure":
+def plot_confusion_matrix(confusion_matrix_data: np.ndarray) -> "go.Figure":
     pio.renderers.default = "png"
 
-    tn, fp, fn, tp = confusion_matrix.ravel()
-
-    accuracy = (tp + tn) / (tp + tn + fp + fn)
-    precision = tp / (tp + fp) if (tp + fp) else 0.0
-    recall = tp / (tp + fn) if (tp + fn) else 0.0  # sensitivity / true positive rate
-    f1 = (
-        2 * (precision * recall) / (precision + recall) if (precision + recall) else 0.0
-    )
-
-    denominator = np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
-    mcc = ((tp * tn) - (fp * fn)) / denominator if denominator else 0.0
-
     fig = px.imshow(
-        confusion_matrix,
+        confusion_matrix_data,
         labels={"x": "Predicted", "y": "True"},
         x=["Negative", "Positive"],
         y=["Negative", "Positive"],
@@ -28,25 +65,9 @@ def plot_confusion_matrix(confusion_matrix: np.ndarray) -> "go.Figure":
         color_continuous_scale="sunsetdark",
     )
 
-    metrics_text = (
-        f"Accuracy: {accuracy:.3f} | Precision: {precision:.3f} | Recall: {recall:.3f}<br>"
-        f"F1: {f1:.3f} | MCC: {mcc:.3f}"
-    )
-
     fig.update_layout(
         coloraxis_showscale=False,
         height=800,
-    )
-
-    fig.add_annotation(
-        text=metrics_text,
-        xref="paper",
-        yref="paper",
-        x=0.5,
-        y=-0.25,
-        showarrow=False,
-        font=dict(size=14),
-        align="center",
     )
 
     return fig

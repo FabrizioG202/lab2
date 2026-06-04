@@ -8,7 +8,7 @@ import importlib
 import itertools
 import re
 from dataclasses import dataclass
-from typing import Iterable, Iterator, Any
+from typing import Iterable, Iterator, Any, Protocol, cast
 import sklearn.metrics
 import logomaker
 import numpy as np
@@ -113,8 +113,9 @@ threshold, history = pswm.compute_optimal_threshold(
     ),
 )
 
-# Now, evaluate on the test set
-src.graphics.plot_confusion_matrix(
+
+# Now, evaluate on the test set and compute the confusion matrix for the PSWM method and save it as an image
+von_heijne_confusion_matrix = src.graphics.ConfusionMatirx(
     sklearn.metrics.confusion_matrix(
         combined_test["label"].to_list(),
         [
@@ -122,7 +123,13 @@ src.graphics.plot_confusion_matrix(
             for motif in combined_test["sequence"].to_list()
         ],
     )
-).write_image("report/.imgs/von_heijne_confusion_matrix.svg")
+)
+
+von_heijne_confusion_matrix.plot().write_image(
+    "report/.imgs/von_heijne_confusion_matrix.svg"
+)
+
+print(von_heijne_confusion_matrix.describe())
 
 # ███████╗ ██╗   ██╗ ███╗   ███╗
 # ██╔════╝ ██║   ██║ ████╗ ████║
@@ -159,29 +166,43 @@ X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
     random_state=42,
     stratify=y,
 )
-models = src.methods.svm.get_svm_models()[::-1]
+svm_models = src.methods.svm.get_svm_models()[::-1]
 
 
-def find_model_by_cv() -> sklearn.base.BaseEstimator:
+class ClassifierEstimator(Protocol):
+    def fit(self, X, y): ...
+    def predict(self, X): ...
+
+
+def find_model_by_cv(
+    x_train: np.ndarray,
+    y_train: np.ndarray,
+    candidate_models: Iterable[sklearn.base.BaseEstimator] | None = None,
+    cv: int = 5,
+    scoring: str = "f1",
+) -> tuple[sklearn.base.BaseEstimator, float]:
+
     best_model = None
-    best_f1 = -1.0
+    best_score = -1.0
+    models_to_evaluate = (
+        list(candidate_models) if candidate_models is not None else svm_models
+    )
 
-    for model in tqdm(models):
-        # CV on the training set to find the best hyperparameters for the model
+    for model in tqdm(models_to_evaluate):
         cv_results = sklearn.model_selection.cross_validate(
             model,
-            X_train,
+            x_train,
             y_train,
-            cv=5,
-            scoring="f1",
+            cv=cv,
+            scoring=scoring,
             return_train_score=False,
         )
 
-        if (mean_f1 := np.mean(cv_results["test_score"])) > best_f1:
-            best_f1 = mean_f1
+        if (mean_score := np.mean(cv_results["test_score"])) > best_score:
+            best_score = mean_score
             best_model = sklearn.base.clone(model)
 
-    return best_model  # ty:ignore[invalid-return-type]
+    return best_model, best_score  # ty:ignore[invalid-return-type]
 
 
 # computed maximizing f1 score we found the best model
@@ -201,9 +222,17 @@ best_model = sklearn.pipeline.Pipeline(
 _ = best_model.fit(X_train, y_train)
 
 # compute the confusion matrix for the best model on the test set and save it as an image
-src.graphics.plot_confusion_matrix(
-    sklearn.metrics.confusion_matrix(y_test, best_model.predict(X_test))
-).write_image("report/.imgs/svm_confusion_matrix.svg")
+svm_confusion_matrix = src.graphics.ConfusionMatirx(
+    sklearn.metrics.confusion_matrix(
+        y_test,
+        best_model.predict(
+            X_test,
+        ),
+    )
+)
+print(svm_confusion_matrix.describe())
+
+svm_confusion_matrix.plot().write_image("report/.imgs/svm_confusion_matrix.svg")
 
 
 #  █████╗  ███╗   ██╗  █████╗  ██╗  ██╗   ██╗ ███████╗ ██╗ ███████╗
@@ -214,11 +243,65 @@ src.graphics.plot_confusion_matrix(
 # ╚═╝  ╚═╝ ╚═╝  ╚═══╝ ╚═╝  ╚═╝ ╚══════╝╚═╝    ╚══════╝ ╚═╝ ╚══════╝
 
 # Feature importance analysis using random forest importance and permutation importance on the SVM model
+feature_analyzer = src.feature_importance.FeatureImportance(
+    feature_df=feature_df,
+    x_train=X_train,
+    y_train=y_train,
+    best_model=best_model,
+)
 
-# # Compute the feature importance for the SVM model and save it as an image
-# src.feature_importance.draw_feature_importance(
-#     svm_model=best_svm_model, x_train=X_train, y_train=y_train, x_dataframe=X_df
-# ).write_image("report/.imgs/svm_feature_importance.svg")
+# compute importances using both methods and save the top 5 features for each method as an image
+permutation_importance = feature_analyzer.compute_permutation_importance(
+    n_repeats=5,
+)
+random_forest_importance, random_forest_model = (
+    feature_analyzer.compute_random_forest_importance()
+)
+
+print("Top 5 features by permutation importance:")
+print(permutation_importance.head(5))
+print("Top 5 features by random forest importance:")
+print(random_forest_importance.head(5))
+
+
+# Re-select the best SVM model on the top 5 features from permutation importance
+selected_features = set(
+    permutation_importance["feature"].head(5).to_list()
+    + random_forest_importance["feature"].head(5).to_list()
+)
+selected_features
+X_reduced_df = X_df.select(selected_features)
+X_reduced = X_reduced_df.to_numpy()
+
+X_reduced_train, X_reduced_test, y_reduced_train, y_reduced_test = (
+    sklearn.model_selection.train_test_split(
+        X_reduced,
+        y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y,
+    )
+)
+
+reduced_best_model, reduced_best_cv_f1 = find_model_by_cv(
+    X_reduced_train,
+    y_reduced_train,
+)
+reduced_best_model = cast(ClassifierEstimator, reduced_best_model)
+_ = reduced_best_model.fit(X_reduced_train, y_reduced_train)
+
+reduced_svm_confusion_matrix = src.graphics.ConfusionMatirx(
+    sklearn.metrics.confusion_matrix(
+        y_reduced_test,
+        reduced_best_model.predict(X_reduced_test),
+    )
+)
+print(f"Reduced SVM best CV f1: {reduced_best_cv_f1:.4f}")
+print(reduced_svm_confusion_matrix.describe())
+reduced_svm_confusion_matrix.plot().write_image(
+    "report/.imgs/svm_confusion_matrix_top5_permutation.svg"
+)
+
 
 # ███╗   ███╗ ██╗      ██████╗
 # ████╗ ████║ ██║      ██╔══██╗
