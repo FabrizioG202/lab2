@@ -64,7 +64,7 @@ K_RESIDUES_BEFORE = 13
 K_RESIDUES_AFTER = 2
 
 # Add a column to the positive which has the motifs (the K residues before and after the cleavage site)
-# We assume this does not throw since we selected for residues with SP cleavage site > 14 and sequence length > 90
+# We assume this does not throw since we selected for residues with SP cleavage site > 14 and sequence length > 40
 positive = positive.with_columns(
     pl.concat_str(
         [
@@ -103,8 +103,6 @@ combined = pl.concat(
 #  ╚████╔╝  ╚██████╔╝ ██║ ╚████║        ██║  ██║ ███████╗ ╚█████╔╝ ██║ ╚████║ ███████╗
 #   ╚═══╝    ╚═════╝  ╚═╝  ╚═══╝        ╚═╝  ╚═╝ ╚══════╝  ╚════╝  ╚═╝  ╚═══╝ ╚══════╝
 
-# possible aas
-ALPHABET = list("GAVPLIMFWYSTCNQHDEKR")
 
 # split 80% train 20% test
 combined_train, combined_test = src.processing.split_df(combined, fraction=0.8, seed=42)
@@ -112,7 +110,8 @@ combined_train, combined_test = src.processing.split_df(combined, fraction=0.8, 
 # Compute the PSWM on the training set, using only the positive examples
 # with a motif (i.e. where we could extract the motif).
 pswm = src.methods.von_heijne.PSWM.compute_for(
-    [m for m in combined_train["motif"].to_list() if m is not None], alphabet=ALPHABET
+    [m for m in combined_train["motif"].to_list() if m is not None],
+    alphabet=list("GAVPLIMFWYSTCNQHDEKR"),
 )
 
 # Use CV to compute the optimal threshold for the PSWM scores on the training set.
@@ -276,6 +275,16 @@ print("Top 5 features by permutation importance:")
 print(permutation_importance.head(5))
 print("Top 5 features by random forest importance:")
 print(random_forest_importance.head(5))
+
+# Intermezzo, we get the metrics and confusion matrix for the random forest model and save it as an image
+random_forest_confusion_matrix = src.graphics.ConfusionMatirx(
+    sklearn.metrics.confusion_matrix(
+        y_test,
+        random_forest_model.predict(X_test),
+    )
+)
+
+print(random_forest_confusion_matrix.describe())
 
 
 # Re-select the best SVM model on the top 5 features from permutation importance

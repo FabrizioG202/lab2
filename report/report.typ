@@ -33,7 +33,7 @@
 #text(weight: "bold")[Results:] With this paper, we provide two models for the detection of Signal Peptides from sequence information. The first model, based on the Von-Heijne algorithm, produces a relatively accurate model, with an MCC of $0.66$. The second model is based on Support Vector Machines and achieves an higher MCC of $0.86$ and $f_1$ score of $0.87$, supporting an overall stronger model. Given the complexity of the full SVM model, we also trained a reduced model, which trades some performance (MCC of $0.73$, and $f_1$ of $0.76$), for a significantly lower number of features necessary, lowering the amount of preprocessing needed and the overall complexity of the final model.
 
 = Introduction
-For a protein to enter the secretory pathway, in both eukaryotic and prokaryotic cells, it must be endowed with a specific target signal. Often, this signal takes the shape of a short sequences located at the N-terminus of proteins #link("http://www.ncbi.nlm.nih.gov/pubmed/2197415")[ref]. The signal peptide (SP) has a distinct three-domain structure, depicted in @sp_structure, with a positively charged N-terminal region (n-region), a central hydrophobic region (H-region) and a more polar C-terminal region (C-region) containing the cleavage site #link("http://www.ncbi.nlm.nih.gov/pubmed/2197415")[ref]. Given their importance in many aspects of cell biology, the accurate detection of SPs is a crucial task in bioinformatics, which has been tackled before with a variety of approaches, including machine learning (SVMs #link("https://pubmed.ncbi.nlm.nih.gov/19470175")[ref], #link("https://pubmed.ncbi.nlm.nih.gov/21959131/")[ref] and Bayesian networks #link("http://www.ncbi.nlm.nih.gov/pubmed/18989393")[ref], Hidden Markov Models #link("https://doi.org/10.1016/j.jmb.2004.03.016")[ref]), and, more recently, deep learning #link("https://academic.oup.com/bioinformatics/article/34/10/1690/4769493?login=false")[ref].
+For a protein to enter the secretory pathway, in both eukaryotic and prokaryotic cells, it must be endowed with a specific target signal. Often, this signal takes the shape of a short sequences located at the N-terminus of proteins @von_Heijne_1990. The signal peptide (SP) has a distinct three-domain structure, depicted in @sp_structure, with a positively charged N-terminal region (n-region), a central hydrophobic region (H-region) and a more polar C-terminal region (C-region) containing the cleavage site @von_Heijne_1990. Given their importance in many aspects of cell biology, the accurate detection of SPs is a crucial task in bioinformatics, which has been tackled before with a variety of approaches, including machine learning (SVMs @Nugent_Jones_2009, @Petersen_Brunak_von_Heijne_Nielsen_2011 and Bayesian networks @Reynolds_Käll_Riffle_Bilmes_Noble_2008, Hidden Markov Models @Käll_Krogh_Sonnhammer_2004), and, more recently, deep learning @Savojardo_Martelli_Fariselli_Casadio_2018.
 
 #figure(
   image(".imgs/sp_structure.png"),
@@ -52,7 +52,7 @@ For the negative set, proteins not annotated with a signal peptide and endowed w
 
 Further selection on the positive entries was carried out in order to select proteins which had informaton about the cleavage site and a Signal Peptide with a length of at least 14bp.
 
-The distribution of sequence lengths in the positive and negative datasets is shown in @length-distribution. The kingdom composition of the two datasets is shown in @kingdom-distribution. The distribution of cleavage-site positions, corresponding to the length of the cleaved N-terminal region in positive sequences, is shown in @cleaved-region-length-distribution.
+To perform an initial screening for possible differences between the two sets, we plotted the distribution of sequence lengths in the positive and negative datasets (@length-distribution), which showed similar trends. To ensure equal distribution among the kindoms, the composition of each set was considered (@kingdom-distribution). The distribution of cleavage-site positions, corresponding to the length of the cleaved N-terminal region in positive sequences, is shown in @cleaved-region-length-distribution. The distribution was used to quickly scan for outliers and to crudely confirm the biological plausibility of the information.
 
 #figure(
   image(".imgs/length_distribution.svg"),
@@ -71,7 +71,7 @@ The distribution of sequence lengths in the positive and negative datasets is sh
 
 == Clustering
 
-Sequences were clustered using mmseqs2 #link("https://www.nature.com/articles/nbt.3988")[ref], using parameters `--min-seq-id 0.3, cluster-mode 1 -cov-mode 0 -c 0.4`, in order to cluster sequences with a similarity of at least 30\% and an alignment spanning at least 40\% of the total sequence length. The number of sequences in the datasets is reported in @seq-counts.
+Sequences were clustered using mmseqs2 @Steinegger_Söding_2017, using parameters `--min-seq-id 0.3, cluster-mode 1 -cov-mode 0 -c 0.4`, in order to cluster sequences with a similarity of at least 30\% and an alignment spanning at least 40\% of the total sequence length. The number of sequences in the datasets is reported in @seq-counts.
 
 #figure(
   table(
@@ -123,7 +123,7 @@ For this experiment, $k$ was chosen to be the average position of the cut site, 
 ) <feature-example>
 
 == Support Vector Machine <svm-methods>
-Support Vector Machines (SVM) are a machine learning methodology that can be used for two-group classification problems. SVMs separate classes using an hyperplane, defined by a small set of points called support vectors. Albeit trivial for linearly separable classes, vector machines can make use of a kernel function, which allows the mapping of input points from the original space to an higher-dimension space (feature space). In this new space, a linear decision boundary can be established, which, when mapped back to the original space, will produce a complex non-linear decision boundary, enabling correct classification of complex classes #link("https://link.springer.com/article/10.1007/BF00994018")[ref]. A commonly used kernel function is Radial Basis Function (RBF), which is defined as follows:
+Support Vector Machines (SVM) are a machine learning methodology that can be used for two-group classification problems. SVMs separate classes using an hyperplane, defined by a small set of points called support vectors. Albeit trivial for linearly separable classes, vector machines can make use of a kernel function, which allows the mapping of input points from the original space to an higher-dimension space (feature space). In this new space, a linear decision boundary can be established, which, when mapped back to the original space, will produce a complex non-linear decision boundary, enabling correct classification of complex classes @Cortes_Vapnik_1995. A commonly used kernel function is Radial Basis Function (RBF), which is defined as follows:
 $
   K(x, x') = exp(-gamma ||x - x'||^2)
 $
@@ -192,7 +192,7 @@ The model, as chosen in the hyperparameter tuning phase, is a SVM with RBF kerne
 
 
 === Feature Importance <feature-importance>
-In order to understand which features contribute the most to the ability of our model to classify sequences, we employed two methods. As a first test, we assesed permutation importance, where values of each feature are randomly shuffled in order to break their relationship with the target label, using the drop in the classifier accuracy as a proxy for the importance of the feature. As a second test, we trained a Random Forest Classifier with $500$ classifiers and exploited the model's own feature importance, which is computed as a result of the training process.
+In order to understand which features contribute the most to the ability of our model to classify sequences, we employed two methods. As a first test, we assesed permutation importance, where values of each feature are randomly shuffled in order to break their relationship with the target label, using the drop in the classifier accuracy as a proxy for the importance of the feature. As a second test, we trained a Random Forest Classifier with $500$ classifiers and exploited the model's own feature importance, which is computed as a result of the training process. We also evaluated the performance of the resulting random forest classifier, which itself proved to be a good model, with an accuracy of $0.9580$, precision of $0.9036$, recall of $0.6849$, F1 score of $0.7792$, and MCC of $0.7654$.
 
 The top 5 features identified by each method are shown in @permutation-importance and @rf-importance. Both methods consistently identified `n_terminal_comp_L` (leucine composition in the N-terminal region) and `tm_max` (maximum transmembrane tendency) as important features, even if with different ranks.
 
@@ -243,7 +243,4 @@ A model was selected using the same method used to select the full model, includ
 ) <svm-confusion-matrix>
 
 
-
-
-
-
+#bibliography("bib.bib")
