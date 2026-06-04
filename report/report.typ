@@ -48,7 +48,7 @@ For the negative set, proteins not annotated with a signal peptide and endowed w
 
 Further selection on the positive entries was carried out in order to select proteins which had informaton about the cleavage site and a Signal Peptide with a length of at least 14bp.
 
-The distribution of sequence lengths in the positive and negative datasets is shown in @length-distribution. The kingdom composition of the two datasets is shown in @kingdom-distribution.
+The distribution of sequence lengths in the positive and negative datasets is shown in @length-distribution. The kingdom composition of the two datasets is shown in @kingdom-distribution. The distribution of cleavage-site positions, corresponding to the length of the cleaved N-terminal region in positive sequences, is shown in @cleaved-region-length-distribution.
 
 #figure(
   image(".imgs/length_distribution.svg"),
@@ -59,6 +59,11 @@ The distribution of sequence lengths in the positive and negative datasets is sh
   image(".imgs/kingdom_distribution.svg"),
   caption: [Kingdom distribution of positive and negative datasets],
 ) <kingdom-distribution>
+
+#figure(
+  image(".imgs/cleaved_region_length_distribution.svg"),
+  caption: [Length distribution of the cleaved region in positive sequences],
+) <cleaved-region-length-distribution>
 
 == Clustering
 

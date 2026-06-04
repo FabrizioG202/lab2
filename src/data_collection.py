@@ -374,6 +374,30 @@ def plot_kingdom_distribution(
     return fig
 
 
+def plot_cleaved_region_lengths(positive: pl.DataFrame) -> go.Figure:
+    cleavage_lengths = positive["cleavage_site"].to_list()
+
+    fig = go.Figure(
+        data=[
+            go.Histogram(
+                x=cleavage_lengths,
+                marker_color="mediumseagreen",
+                nbinsx=30,
+                name="Cleaved region length",
+            )
+        ]
+    )
+
+    fig.update_layout(
+        title="Length distribution of the cleaved region",
+        xaxis_title="Cleaved region length",
+        yaxis_title="Count",
+        showlegend=False,
+    )
+
+    return fig
+
+
 def collect_data(
     purge_cache: bool = False,
 ) -> tuple[

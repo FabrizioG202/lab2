@@ -34,12 +34,20 @@ import src.feature_importance; importlib.reload(src.feature_importance); clear_o
 
 # collect data
 all_positive, all_negative, positive, negative = src.data_collection.collect_data()
-src.data_collection.plot_lengths(positive, negative).write_image(
-    "report/.imgs/length_distribution.svg"
-)
-src.data_collection.plot_kingdom_distribution(positive, negative).write_image(
-    "report/.imgs/kingdom_distribution.svg"
-)
+
+src.data_collection.plot_lengths(
+    positive,
+    negative,
+).write_image("report/.imgs/length_distribution.svg")
+
+src.data_collection.plot_kingdom_distribution(
+    positive,
+    negative,
+).write_image("report/.imgs/kingdom_distribution.svg")
+
+src.data_collection.plot_cleaved_region_lengths(
+    positive,
+).write_image("report/.imgs/cleaved_region_length_distribution.svg")
 
 
 # Add a column with the sequence neighbouring the Cleavage site.
