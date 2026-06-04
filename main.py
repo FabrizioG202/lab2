@@ -1,3 +1,4 @@
+from sklearn.neural_network import MLPClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
@@ -34,6 +35,7 @@ import src.feature_importance; importlib.reload(src.feature_importance); clear_o
 # collect data
 all_positive, all_negative, positive, negative = src.data_collection.collect_data()
 
+
 # Add a column with the sequence neighbouring the Cleavage site.
 # ┌───────────┬───────────────────────┬──────────────────────────┐
 # │           │                       │                          │
@@ -68,8 +70,6 @@ fig = src.logo_generator.generate_logo(
     right_bound=K_RESIDUES_AFTER,
 ).savefig("report/.imgs/positive_logo.svg")
 
-# possible aas
-ALPHABET = list("GAVPLIMFWYSTCNQHDEKR")
 
 # combined dataframes with:
 # label = 1 for positive
@@ -89,10 +89,14 @@ combined = pl.concat(
 #  ╚████╔╝  ╚██████╔╝ ██║ ╚████║        ██║  ██║ ███████╗ ╚█████╔╝ ██║ ╚████║ ███████╗
 #   ╚═══╝    ╚═════╝  ╚═╝  ╚═══╝        ╚═╝  ╚═╝ ╚══════╝  ╚════╝  ╚═╝  ╚═══╝ ╚══════╝
 
+# possible aas
+ALPHABET = list("GAVPLIMFWYSTCNQHDEKR")
+
 # split 80% train 20% test
 combined_train, combined_test = src.processing.split_df(combined, fraction=0.8, seed=42)
 
-# Compute the PSWM on the training set, using only the positive examples with a motif (i.e. where we could extract the motif).
+# Compute the PSWM on the training set, using only the positive examples
+# with a motif (i.e. where we could extract the motif).
 pswm = src.methods.von_heijne.PSWM.compute_for(
     [m for m in combined_train["motif"].to_list() if m is not None], alphabet=ALPHABET
 )
@@ -120,137 +124,6 @@ src.graphics.plot_confusion_matrix(
     )
 ).write_image("report/.imgs/von_heijne_confusion_matrix.svg")
 
-
-# ███████╗ ███████╗  █████╗  ████████╗ ██╗   ██╗ ██████╗  ███████╗ ███████╗
-# ██╔════╝ ██╔════╝ ██╔══██╗ ╚══██╔══╝ ██║   ██║ ██╔══██╗ ██╔════╝ ██╔════╝
-# █████╗   █████╗   ███████║    ██║    ██║   ██║ ██████╔╝ █████╗   ███████╗
-# ██╔══╝   ██╔══╝   ██╔══██║    ██║    ██║   ██║ ██╔══██╗ ██╔══╝   ╚════██║
-# ██║      ███████╗ ██║  ██║    ██║    ╚██████╔╝ ██║  ██║ ███████╗ ███████║
-# ╚═╝      ╚══════╝ ╚═╝  ╚═╝    ╚═╝     ╚═════╝  ╚═╝  ╚═╝ ╚══════╝ ╚══════╝
-average_cut_site_position = int(
-    np.mean(combined_train["cleavage_site"].drop_nulls().to_numpy())
-)
-
-best_hp = None
-best_f1 = -1.0
-
-for cutoff, model in tqdm(
-    src.feature_extraction.get_all_hp_combinations(
-        average_cut_position=average_cut_site_position
-    )[:5],
-    position=0,
-):
-    feature_df = pl.DataFrame(
-        [
-            {
-                "accession": row["accession"],
-                "label": row["label"],
-                #
-                # composition up to cutoff
-                **src.feature_extraction.FeatureExtractor(
-                    row["sequence"][:90]
-                ).get_c_term_composition(cutoff=cutoff),
-                #
-                # composition from cutoff
-                **src.feature_extraction.FeatureExtractor(
-                    row["sequence"][:90]
-                ).get_n_term_composition(cutoff=cutoff),
-                #
-                #
-                # global hydrophobicity
-                **src.feature_extraction.FeatureExtractor(
-                    row["sequence"][:90]
-                ).get_feature_described(
-                    scale=Bio.SeqUtils.ProtParamData.kd,
-                    scale_name="kd",
-                    window_size=5,
-                ),
-                #
-                # global alpha-helix tendency
-                **src.feature_extraction.FeatureExtractor(
-                    row["sequence"][:90]
-                ).get_feature_described(
-                    scale=src.utils.AdditionalProtParamData.alpha_helix_tendency,
-                    scale_name="alpha_helix_tendency",
-                    window_size=5,
-                ),
-                #
-                # global transmembrane tendency
-                **src.feature_extraction.FeatureExtractor(
-                    row["sequence"][:90]
-                ).get_feature_described(
-                    scale=src.utils.AdditionalProtParamData.transmembrane_tendency,
-                    scale_name="transmembrane_tendency",
-                    window_size=5,
-                ),
-                #
-                # global bulkiness
-                **src.feature_extraction.FeatureExtractor(
-                    row["sequence"][:90]
-                ).get_feature_described(
-                    scale=src.utils.AdditionalProtParamData.bulkiness,
-                    scale_name="bulkiness",
-                    window_size=5,
-                ),
-                #
-                # global polarity
-                **src.feature_extraction.FeatureExtractor(
-                    row["sequence"][:90]
-                ).get_feature_described(
-                    scale=src.utils.AdditionalProtParamData.polarity,
-                    scale_name="polarity",
-                    window_size=5,
-                ),
-            }
-            for row in combined.iter_rows(named=True)
-        ],
-    )
-
-    # Extract the features
-    X_df = feature_df.drop(["label", "accession"])
-    X = X_df.to_numpy()
-    y = feature_df["label"].to_numpy()
-
-    best_model: sklearn.base.BaseEstimator = None  # ty:ignore[invalid-assignment]
-    best_f1 = -1.0
-
-    # split 80% train 20% test
-    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
-
-    # CV on the training set to find the best hyperparameters for the model
-    cv_results = sklearn.model_selection.cross_validate(
-        model,
-        X_train,
-        y_train,
-        cv=5,
-        scoring="f1",
-        return_train_score=False,
-    )
-
-    mean_f1 = np.mean(cv_results["test_score"])
-
-    if mean_f1 > best_f1:
-        best_f1 = mean_f1
-        best_hp = (cutoff, model)
-
-sequences = combined["sequence"].to_list()
-labels = combined["label"].to_list()
-
-X_train, X_test, y_train, y_test = train_test_split(
-    sequences, labels, test_size=0.2, stratify=labels, random_state=42
-)
-
-vectorizer = TfidfVectorizer(analyzer="char", ngram_range=(3, 6), min_df=2)
-
-X_train_vec = vectorizer.fit_transform(X_train)
-X_test_vec = vectorizer.transform(X_test)
-
-model = sklearn.svm.SVC(kernel="rbf", C=1, gamma="scale")
-model.fit(X_train_vec, y_train)
-
-
 # ███████╗ ██╗   ██╗ ███╗   ███╗
 # ██╔════╝ ██║   ██║ ████╗ ████║
 # ███████╗ ██║   ██║ ██╔████╔██║
@@ -258,11 +131,78 @@ model.fit(X_train_vec, y_train)
 # ███████║  ╚████╔╝  ██║ ╚═╝ ██║
 # ╚══════╝   ╚═══╝   ╚═╝     ╚═╝
 
-# best_svm_model, _ = src.methods.svm.fit_svm(X_train, y_train)
 
-# Save the confusion matrix computed on the test set as an image
+# extract the features for the list of sequence
+feature_df = pl.DataFrame(
+    [
+        {
+            "accession": row["accession"],
+            "label": row["label"],
+            **src.feature_extraction.FeatureExtractor(row["sequence"]).get_all_features(
+                k=22, n=90, window_size=5
+            ),
+        }
+        for row in combined.iter_rows(named=True)
+    ],
+)
+
+# Extract the features
+X_df = feature_df.drop(["label", "accession"])
+X = X_df.to_numpy()
+y = feature_df["label"].to_numpy()
+
+# split 80% train 20% test
+X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y,
+)
+models = src.methods.svm.get_svm_models()[::-1]
+
+
+def find_model_by_cv() -> sklearn.base.BaseEstimator:
+    best_model = None
+    best_f1 = -1.0
+
+    for model in tqdm(models):
+        # CV on the training set to find the best hyperparameters for the model
+        cv_results = sklearn.model_selection.cross_validate(
+            model,
+            X_train,
+            y_train,
+            cv=5,
+            scoring="f1",
+            return_train_score=False,
+        )
+
+        if (mean_f1 := np.mean(cv_results["test_score"])) > best_f1:
+            best_f1 = mean_f1
+            best_model = sklearn.base.clone(model)
+
+    return best_model  # ty:ignore[invalid-return-type]
+
+
+# computed maximizing f1 score we found the best model
+# to run the optimizing process again, uncomment the line below
+# best_model = find_model_by_cv()
+# This is the model we found to be the best after running the optimization process,
+# we hardcode it here to avoid running the optimization process again.
+best_model = sklearn.pipeline.Pipeline(
+    [
+        ("scaler", sklearn.preprocessing.StandardScaler()),
+        ("svm", sklearn.svm.SVC(kernel="rbf", C=2, gamma=0.01, random_state=42)),
+    ]
+)
+
+
+# refit on the whole training set
+_ = best_model.fit(X_train, y_train)
+
+# compute the confusion matrix for the best model on the test set and save it as an image
 src.graphics.plot_confusion_matrix(
-    sklearn.metrics.confusion_matrix(y_test, best_svm_model.predict(X_test))
+    sklearn.metrics.confusion_matrix(y_test, best_model.predict(X_test))
 ).write_image("report/.imgs/svm_confusion_matrix.svg")
 
 
@@ -275,10 +215,10 @@ src.graphics.plot_confusion_matrix(
 
 # Feature importance analysis using random forest importance and permutation importance on the SVM model
 
-# Compute the feature importance for the SVM model and save it as an image
-src.feature_importance.draw_feature_importance(
-    svm_model=best_svm_model, x_train=X_train, y_train=y_train, x_dataframe=X_df
-).write_image("report/.imgs/svm_feature_importance.svg")
+# # Compute the feature importance for the SVM model and save it as an image
+# src.feature_importance.draw_feature_importance(
+#     svm_model=best_svm_model, x_train=X_train, y_train=y_train, x_dataframe=X_df
+# ).write_image("report/.imgs/svm_feature_importance.svg")
 
 # ███╗   ███╗ ██╗      ██████╗
 # ████╗ ████║ ██║      ██╔══██╗
@@ -287,4 +227,18 @@ src.feature_importance.draw_feature_importance(
 # ██║ ╚═╝ ██║ ███████╗ ██║
 # ╚═╝     ╚═╝ ╚══════╝ ╚═╝
 
-mlp_model = src.methods.mlp.fit_mlp(X_train, y_train)
+mlp_model = MLPClassifier(
+    hidden_layer_sizes=(100, 50),
+    max_iter=1000,
+    random_state=42,
+    early_stopping=True,
+    validation_fraction=0.1,
+)
+
+# fit on the training set
+mlp_model.fit(X_train, y_train)
+
+# compute the confusion matrix for the MLP model on the test set and save it as an image
+src.graphics.plot_confusion_matrix(
+    sklearn.metrics.confusion_matrix(y_test, mlp_model.predict(X_test))
+).write_image("report/.imgs/mlp_confusion_matrix.svg")

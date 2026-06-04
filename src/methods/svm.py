@@ -14,12 +14,12 @@ def get_svm_models() -> list[sklearn.svm.SVC]:
     PARAMS = [
         {
             "svm__kernel": ["rbf"],
-            "svm__C": [0.1, 1, 10, 100],
-            "svm__gamma": ["scale", 0.001, 0.01, 0.1, 1],
+            "svm__C": [0.1, 1, 2, 4, 8],
+            "svm__gamma": ["scale", 0.001, 0.01, 0.1, 1, 2],
         },
         {
             "svm__kernel": ["linear"],
-            "svm__C": [0.1, 1, 10, 100],
+            "svm__C": [0.1, 1, 2, 4, 8],
         },
     ]
     models = []

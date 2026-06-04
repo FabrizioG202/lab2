@@ -42,10 +42,10 @@ class FeatureExtractor:
         }
 
     def get_feature_described(
-        self, scale: dict[str, float], window_size: int, scale_name: str
+        self, scale: dict[str, float], window_size: int, scale_name: str, n: int
     ) -> dict[str, int | float | Any]:
 
-        values = self.get_feature(scale, window_size)
+        values = self.get_feature(scale, window_size, n)
         return {
             f"{scale_name}_mean": np.mean(values),
             f"{scale_name}_std": np.std(values),
@@ -58,11 +58,12 @@ class FeatureExtractor:
         self,
         scale: dict[str, float],
         window_size: int,
+        n: int,
     ) -> list[float]:
         # This is a bit of an hack to prevent noise in the terminal
         # since protein_scale complains about non-standard aminoacids.
         with contextlib.redirect_stderr(io.StringIO()):
-            values = ProteinAnalysis(self.sequence).protein_scale(
+            values = ProteinAnalysis(self.sequence[:n]).protein_scale(
                 scale,
                 window=window_size,
             )
@@ -71,7 +72,7 @@ class FeatureExtractor:
 
     # Returns all the features for the `self.sequence`, to be used
     # with the svm model
-    def get_all_features(self, k: int, n: int):
+    def get_all_features(self, k: int, n: int, window_size: int):
         features = {}
         features.update(self.get_n_term_composition(cutoff=k))
         features.update(self.get_c_term_composition(cutoff=k))
@@ -79,31 +80,38 @@ class FeatureExtractor:
             {
                 # Kd hydrophobicity scale
                 **self.get_feature_described(
-                    Bio.SeqUtils.ProtParamData.kd, window_size=n, scale_name="kd"
+                    Bio.SeqUtils.ProtParamData.kd,
+                    window_size=window_size,
+                    scale_name="kd",
+                    n=n,
                 ),
                 # alpha-helix tendency scale
                 **self.get_feature_described(
                     src.utils.AdditionalProtParamData.alpha_helix_tendency,
-                    window_size=n,
+                    window_size=window_size,
                     scale_name="alpha",
+                    n=n,
                 ),
                 # transmembrane tendency
                 **self.get_feature_described(
                     src.utils.AdditionalProtParamData.transmembrane_tendency,
-                    window_size=n,
+                    window_size=window_size,
                     scale_name="tm",
+                    n=n,
                 ),
                 # bulkiness
                 **self.get_feature_described(
                     src.utils.AdditionalProtParamData.bulkiness,
-                    window_size=n,
+                    window_size=window_size,
                     scale_name="bulkiness",
+                    n=n,
                 ),
                 # polarity
                 **self.get_feature_described(
                     src.utils.AdditionalProtParamData.polarity,
-                    window_size=n,
+                    window_size=window_size,
                     scale_name="polarity",
+                    n=n,
                 ),
             }
         )
