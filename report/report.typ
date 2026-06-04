@@ -15,18 +15,22 @@
 )
 
 #place(
-  top + center,
+  top + left,
   scope: "parent",
   float: true,
-  text(1.4em, weight: "bold")[
-    A comparative analysis of Von-Heijne, SVM and Perceptron Models for the detecton of Signal Peptides.
+  [
+    #text(1.4em, weight: "bold")[
+      A comparative analysis of Von-Heijne, SVM and Perceptron Models for the detecton of Signal Peptides.
+    ]
+    #v(0.5em)
+    #text(0.9em)[Fabrizio Guidotti]
   ],
 )
 
 = Abstract
-#text(weight: "bold")[Motivation:] This is the motivation
+#text(weight: "bold")[Motivation:] Signal peptides enable proteins to enter the secretory pathway. Given their importance and the high cost of in-vivo assays, accurate in-silico SP detection models have taken on an important role in bioinformatics.
 
-#text(weight: "bold")[Results:] This are the results.
+#text(weight: "bold")[Results:] With this paper, we provide two models for the detection of Signal Peptides from sequence information. The first model, based on the Von-Heijne algorithm, produces a relatively accurate model, with an MCC of $0.66$. The second model is based on Support Vector Machines and achieves an higher MCC of $0.86$ and f_1 score of $0.87$, supporting an overall stronger model. Given the complexity of the full SVM model, we also trained a reduced model, which trades some performance (MCC of $0.73$, and f_1 of $0.76$), for a significantly lower number of features necessary, lowering the amount of preprocessing needed and the overall complexity of the final model.
 
 = Introduction
 For a protein to enter the secretory pathway, in both eukaryotic and prokaryotic cells, it must be endowed with a specific target signal. Often, this signal takes the shape of a short sequences located at the N-terminus of proteins #link("http://www.ncbi.nlm.nih.gov/pubmed/2197415")[ref]. The signal peptide (SP) has a distinct three-domain structure, depicted in @sp_structure, with a positively charged N-terminal region (n-region), a central hydrophobic region (H-region) and a more polar C-terminal region (C-region) containing the cleavage site #link("http://www.ncbi.nlm.nih.gov/pubmed/2197415")[ref]. Given their importance in many aspects of cell biology, the accurate detection of SPs is a crucial task in bioinformatics, which has been tackled before with a variety of approaches, including machine learning (SVMs #link("https://pubmed.ncbi.nlm.nih.gov/19470175")[ref], #link("https://pubmed.ncbi.nlm.nih.gov/21959131/")[ref] and Bayesian networks #link("http://www.ncbi.nlm.nih.gov/pubmed/18989393")[ref], Hidden Markov Models #link("https://doi.org/10.1016/j.jmb.2004.03.016")[ref]), and, more recently, deep learning #link("https://academic.oup.com/bioinformatics/article/34/10/1690/4769493?login=false")[ref].
@@ -119,10 +123,17 @@ For this experiment, $k$ was chosen to be the average position of the cut site, 
 ) <feature-example>
 
 == Support Vector Machine <svm-methods>
+Support Vector Machines (SVM) are a machine learning methodology that can be used for two-group classification problems. SVMs separate classes using an hyperplane, defined by a small set of points called support vectors. Albeit trivial for linearly separable classes, vector machines can make use of a kernel function, which allows the mapping of input points from the original space to an higher-dimension space (feature space). In this new space, a linear decision boundary can be established, which, when mapped back to the original space, will produce a complex non-linear decision boundary, enabling correct classification of complex classes #link("https://link.springer.com/article/10.1007/BF00994018")[ref]. A commonly used kernel function is Radial Basis Function (RBF), which is defined as follows:
+$
+  K(x, x') = exp(-gamma ||x - x'||^2)
+$
+
+The $gamma$ parameter defines how much influence a single training example has. A low $gamma$ value means that the influence of a single training example is far-reaching, while a high $gamma$ value means that the influence is limited to close neighbors. For both linear and RBF kernels, the $C$ parameter controls the trade-off between maximizing the margin and minimizing the classification error, with low C values leading to a widwe margin and a simpler model, and high C values leading to a narrower margin, with few training errors but a more complex model.
+
 We used a grid search to find optimal hyperparameters, testing both RBF and linear kernels. For the RBF kernel, we evaluated C values of 0.1, 1, 2, 4, and 8, combined with gamma values of "scale", 0.001, 0.01, 0.1, 1, and 2. For the linear kernel, we tested C values of 0.1, 1, 2, 4, and 8. Each model was tested on a and evaluated on an 80\% training split. The model yielding the highest f1 score was found to have a `rbf` kernel, with $C=2$ and $gamma=0.01$, with a mean f1 score across the 5 folds ran on the training set of $0.87$.
 
 == Evaluation and comparison <evaluation-and-comparison>
-Rather than relying on accuracy alone, since the dataset is greatly imbalanced, to evaluate and compare the performance of the models, we computed several metrics on the test set.The metrics were calculated based on the following formulas:
+Rather than relying on accuracy alone, since the dataset is greatly imbalanced, to evaluate and compare the performance of the models, we computed several metrics on the test set. The metrics were calculated based on the following formulas:
 
 *Accuracy:* The proportion of correctly classified instances among all instances.
 $
