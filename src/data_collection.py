@@ -6,6 +6,7 @@ import tempfile
 import warnings
 from typing import Callable, Self
 
+import plotly.graph_objects as go
 import polars as pl
 import requests
 from Bio import SeqIO
@@ -288,6 +289,89 @@ class DataCollector:
                     ]
                 )
             )
+
+
+def plot_lengths(
+    positive: pl.DataFrame,
+    negative: pl.DataFrame,
+) -> go.Figure:
+    positive_lengths = positive["sequence"].str.len_chars().to_list()
+    negative_lengths = negative["sequence"].str.len_chars().to_list()
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Histogram(
+            x=positive_lengths,
+            name="Positive",
+            marker_color="royalblue",
+            opacity=0.65,
+            nbinsx=40,
+        )
+    )
+    fig.add_trace(
+        go.Histogram(
+            x=negative_lengths,
+            name="Negative",
+            marker_color="indianred",
+            opacity=0.65,
+            nbinsx=40,
+        )
+    )
+
+    fig.update_layout(
+        title="Sequence Length Distribution",
+        xaxis_title="Sequence length",
+        yaxis_title="Count",
+        barmode="overlay",
+    )
+
+    return fig
+
+
+def plot_kingdom_distribution(
+    positive: pl.DataFrame,
+    negative: pl.DataFrame,
+) -> go.Figure:
+    kingdom_counts = (
+        pl.concat(
+            [
+                positive.select(pl.col("kingdom")).with_columns(
+                    pl.lit("Positive").alias("dataset")
+                ),
+                negative.select(pl.col("kingdom")).with_columns(
+                    pl.lit("Negative").alias("dataset")
+                ),
+            ],
+            how="diagonal",
+        )
+        .group_by(["dataset", "kingdom"])
+        .len()
+        .sort(["dataset", "len"], descending=[False, True])
+    )
+
+    fig = go.Figure()
+    for dataset_name, color in [("Positive", "royalblue"), ("Negative", "indianred")]:
+        subset = kingdom_counts.filter(pl.col("dataset") == dataset_name)
+        fig.add_trace(
+            go.Pie(
+                labels=subset["kingdom"].to_list(),
+                values=subset["len"].to_list(),
+                name=dataset_name,
+                marker=dict(colors=None if dataset_name == "Positive" else None),
+                domain=dict(column=0 if dataset_name == "Positive" else 1),
+            )
+        )
+
+    fig.update_layout(
+        title="Kingdom distribution of positive and negative datasets",
+        grid=dict(rows=1, columns=2),
+        annotations=[
+            dict(text="Positive", x=0.20, y=1.08, showarrow=False),
+            dict(text="Negative", x=0.80, y=1.08, showarrow=False),
+        ],
+    )
+
+    return fig
 
 
 def collect_data(

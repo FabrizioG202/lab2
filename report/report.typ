@@ -48,6 +48,18 @@ For the negative set, proteins not annotated with a signal peptide and endowed w
 
 Further selection on the positive entries was carried out in order to select proteins which had informaton about the cleavage site and a Signal Peptide with a length of at least 14bp.
 
+The distribution of sequence lengths in the positive and negative datasets is shown in @length-distribution. The kingdom composition of the two datasets is shown in @kingdom-distribution.
+
+#figure(
+  image(".imgs/length_distribution.svg"),
+  caption: [Length distribution of positive and negative sequences],
+) <length-distribution>
+
+#figure(
+  image(".imgs/kingdom_distribution.svg"),
+  caption: [Kingdom distribution of positive and negative datasets],
+) <kingdom-distribution>
+
 == Clustering
 
 Sequences were clustered using mmseqs2 #link("https://www.nature.com/articles/nbt.3988")[ref], using parameters `--min-seq-id 0.3, cluster-mode 1 -cov-mode 0 -c 0.4`, in order to cluster sequences with a similarity of at least 30\% and an alignment spanning at least 40\% of the total sequence length. The number of sequences in the datasets is reported in @seq-counts.
