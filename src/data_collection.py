@@ -6,6 +6,7 @@ import tempfile
 import warnings
 from typing import Callable, Self
 
+import numpy as np
 import plotly.graph_objects as go
 import polars as pl
 import requests
@@ -297,6 +298,9 @@ def plot_lengths(
 ) -> go.Figure:
     positive_lengths = positive["sequence"].str.len_chars().to_list()
     negative_lengths = negative["sequence"].str.len_chars().to_list()
+    bin_start = 0
+    bin_end = 4000
+    bin_size = 100
 
     fig = go.Figure()
     fig.add_trace(
@@ -305,7 +309,8 @@ def plot_lengths(
             name="Positive",
             marker_color="royalblue",
             opacity=0.65,
-            nbinsx=40,
+            histnorm="probability",
+            xbins=dict(start=bin_start, end=bin_end, size=bin_size),
         )
     )
     fig.add_trace(
@@ -314,15 +319,17 @@ def plot_lengths(
             name="Negative",
             marker_color="indianred",
             opacity=0.65,
-            nbinsx=40,
+            histnorm="probability",
+            xbins=dict(start=bin_start, end=bin_end, size=bin_size),
         )
     )
 
     fig.update_layout(
         title="Sequence Length Distribution",
         xaxis_title="Sequence length",
-        yaxis_title="Count",
+        yaxis_title="Normalized count",
         barmode="overlay",
+        xaxis=dict(range=[bin_start, bin_end]),
     )
 
     return fig
@@ -376,6 +383,7 @@ def plot_kingdom_distribution(
 
 def plot_cleaved_region_lengths(positive: pl.DataFrame) -> go.Figure:
     cleavage_lengths = positive["cleavage_site"].to_list()
+    average_cleavage_length = float(np.mean(cleavage_lengths))
 
     fig = go.Figure(
         data=[
@@ -386,6 +394,14 @@ def plot_cleaved_region_lengths(positive: pl.DataFrame) -> go.Figure:
                 name="Cleaved region length",
             )
         ]
+    )
+
+    fig.add_vline(
+        x=average_cleavage_length,
+        line_dash="dash",
+        line_color="black",
+        annotation_text=f"Mean = {average_cleavage_length:.2f}",
+        annotation_position="top right",
     )
 
     fig.update_layout(
