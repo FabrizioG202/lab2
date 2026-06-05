@@ -1,7 +1,7 @@
 import contextlib
 import io
 import itertools
-from typing import Any
+from typing import Any, Union
 
 import Bio.SeqUtils.ProtParamData
 import numpy as np
@@ -43,7 +43,7 @@ class FeatureExtractor:
 
     def get_feature_described(
         self, scale: dict[str, float], window_size: int, scale_name: str, n: int
-    ) -> dict[str, int | float | Any]:
+    ) -> dict[str, Union[int, float, Any]]:
 
         values = self.get_feature(scale, window_size, n)
         return {
@@ -122,9 +122,9 @@ def _generate_feature_extraction_image():
     example_sequence = "MKTAYIAKQRQISFVKSHFSRQDILDLWIYHTQGYFPDWQNYTPGPGIRYPLKFRT"
     extractor = FeatureExtractor(example_sequence)
 
-    values = extractor.get_feature(Bio.SeqUtils.ProtParamData.kd, window_size=5)
+    values = extractor.get_feature(Bio.SeqUtils.ProtParamData.kd, window_size=5, n=90)
     described_features = extractor.get_feature_described(
-        Bio.SeqUtils.ProtParamData.kd, window_size=5, scale_name="kd"
+        Bio.SeqUtils.ProtParamData.kd, window_size=5, scale_name="kd", n=90
     )
     pio.renderers.default = "png"
 

@@ -4,7 +4,7 @@ import re
 import subprocess
 import tempfile
 import warnings
-from typing import Callable, Self
+from typing import Callable
 
 import numpy as np
 import plotly.graph_objects as go
@@ -70,7 +70,7 @@ class DataCollector:
         self.negative_query = negative_query
 
     def get_positive_examples(
-        self: Self, ignore_cache: bool = False, cache_file: str = ".data/positive.tsv"
+        self, ignore_cache: bool = False, cache_file: str = ".data/positive.tsv"
     ) -> pl.DataFrame:
         """
         Get the positive examples from UniProt.
@@ -129,7 +129,7 @@ class DataCollector:
         return df
 
     def get_negative_examples(
-        self: Self, ignore_cache: bool = False, cache_file: str = ".data/negative.tsv"
+        self, ignore_cache: bool = False, cache_file: str = ".data/negative.tsv"
     ) -> pl.DataFrame:
         """
         Get the negative examples from UniProt.
@@ -178,7 +178,7 @@ class DataCollector:
         return df
 
     def cluster_df(
-        self: Self,
+        self,
         get_df: Callable[[], pl.DataFrame],
         cache_prefix: str,
         ignore_cache: bool = False,
@@ -253,7 +253,7 @@ class DataCollector:
 
         return df
 
-    def setup_wd(self: Self) -> None:
+    def setup_wd(self) -> None:
         """
         Setup the working directory for the project by creating the .data and .imgs directories if they do not exist.
         """
@@ -263,7 +263,7 @@ class DataCollector:
         if not os.path.exists(".imgs"):
             os.makedirs(".imgs")
 
-    def clean_cache(self: Self) -> None:
+    def clean_cache(self) -> None:
         """
         Clean the data cache directory by removing all files in it.
         """

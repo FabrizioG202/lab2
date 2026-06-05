@@ -29,6 +29,8 @@ import src.graphics; importlib.reload(src.graphics); clear_output()  # noqa: E70
 import src.feature_extraction; importlib.reload(src.feature_extraction); clear_output()  # noqa: E703, E702, E402 # fmt: skip
 import src.methods.svm; importlib.reload(src.methods.svm); clear_output()  # noqa: E703, E702, E402 # fmt: skip
 import src.methods.mlp; importlib.reload(src.methods.mlp); clear_output()  # noqa: E703, E702, E402 # fmt: skip
+import src.methods.model_selection; importlib.reload(src.methods.model_selection); clear_output()  # noqa: E703, E702, E402 # fmt: skip
+import src.methods.von_heijne; importlib.reload(src.methods.von_heijne); clear_output()  # noqa: E703, E702, E402 # fmt: skip
 import src.feature_extraction; importlib.reload(src.feature_extraction); clear_output()  # noqa: E703, E702, E402 # fmt: skip
 import src.feature_importance; importlib.reload(src.feature_importance); clear_output()  # noqa: E703, E702, E402 # fmt: skip
 
@@ -42,11 +44,15 @@ src.data_collection.plot_lengths(
     negative,
 ).write_image("report/.imgs/length_distribution.svg")
 
+# Plot the distribution of the kingdoms in the positive and negative sets to check for
+# systematic differences between the two sets
 src.data_collection.plot_kingdom_distribution(
     positive,
     negative,
 ).write_image("report/.imgs/kingdom_distribution.svg")
 
+# Plot the distribution of the lengths of the cleaved regions in the positive
+# set to check for biological plausibility of the data
 src.data_collection.plot_cleaved_region_lengths(
     positive,
 ).write_image("report/.imgs/cleaved_region_length_distribution.svg")
@@ -181,48 +187,16 @@ X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
     random_state=42,
     stratify=y,
 )
-svm_models = src.methods.svm.get_svm_models()[::-1]
-
-
-class ClassifierEstimator(Protocol):
-    def fit(self, X, y): ...
-    def predict(self, X): ...
-
-
-def find_model_by_cv(
-    x_train: np.ndarray,
-    y_train: np.ndarray,
-    candidate_models: Iterable[sklearn.base.BaseEstimator] | None = None,
-    cv: int = 5,
-    scoring: str = "f1",
-) -> tuple[sklearn.base.BaseEstimator, float]:
-
-    best_model = None
-    best_score = -1.0
-    models_to_evaluate = (
-        list(candidate_models) if candidate_models is not None else svm_models
-    )
-
-    for model in tqdm(models_to_evaluate):
-        cv_results = sklearn.model_selection.cross_validate(
-            model,
-            x_train,
-            y_train,
-            cv=cv,
-            scoring=scoring,
-            return_train_score=False,
-        )
-
-        if (mean_score := np.mean(cv_results["test_score"])) > best_score:
-            best_score = mean_score
-            best_model = sklearn.base.clone(model)
-
-    return best_model, best_score  # ty:ignore[invalid-return-type]
 
 
 # computed maximizing f1 score we found the best model
 # to run the optimizing process again, uncomment the line below
-# best_model = find_model_by_cv()
+# best_model = src.methods.model_selection.find_model_by_cv(
+#     X_train,
+#     y_train,
+#     src.methods.svm.get_svm_models(),
+# )
+
 # This is the model we found to be the best after running the optimization process,
 # we hardcode it here to avoid running the optimization process again.
 best_model = sklearn.pipeline.Pipeline(
@@ -245,6 +219,7 @@ svm_confusion_matrix = src.graphics.ConfusionMatirx(
         ),
     )
 )
+
 print(svm_confusion_matrix.describe())
 
 svm_confusion_matrix.plot().write_image("report/.imgs/svm_confusion_matrix.svg")
@@ -266,15 +241,14 @@ feature_analyzer = src.feature_importance.FeatureImportance(
 )
 
 # compute importances using both methods and save the top 5 features for each method as an image
-permutation_importance = feature_analyzer.compute_permutation_importance(
-    n_repeats=5,
-)
+permutation_importance = feature_analyzer.compute_permutation_importance(n_repeats=5)
 random_forest_importance, random_forest_model = (
     feature_analyzer.compute_random_forest_importance()
 )
 
 print("Top 5 features by permutation importance:")
 print(permutation_importance.head(5))
+
 print("Top 5 features by random forest importance:")
 print(random_forest_importance.head(5))
 

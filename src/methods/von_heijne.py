@@ -1,6 +1,6 @@
 import itertools
 from dataclasses import dataclass
-from typing import Iterator
+from typing import Iterator, Union
 
 import numpy as np
 import polars as pl
@@ -40,7 +40,7 @@ class PSWM:
     def compute_for(
         motifs: list[str],
         alphabet: list[str],
-        motif_length: int | None = None,
+        motif_length: Union[int, None] = None,
     ) -> "PSWM":
 
         if motif_length is None:
