@@ -208,14 +208,14 @@ The top 5 features identified by each method are shown in @permutation-importanc
 
 #figure(
   table(
-    columns: 3,
-    align: (left, center, center),
-    [*Feature*], [*Importance Mean*], [*Importance Std*],
-    [`n_terminal_comp_L`], [0.068479], [0.002761],
-    [`n_terminal_comp_A`], [0.010622], [0.001014],
-    [`tm_max`], [0.008453], [0.001321],
-    [`kd_max_pos`], [0.008225], [0.001022],
-    [`n_terminal_comp_D`], [0.008195], [0.001233],
+    columns: 2,
+    align: (left, center),
+    [*Feature*], [*Importance Mean*],
+    [`n_terminal_comp_L`], [0.068479],
+    [`n_terminal_comp_A`], [0.010622],
+    [`tm_max`], [0.008453],
+    [`kd_max_pos`], [0.008225],
+    [`n_terminal_comp_D`], [0.008195],
   ),
   caption: [Top 5 features by permutation importance],
 )<permutation-importance>
