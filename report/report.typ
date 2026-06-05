@@ -19,18 +19,28 @@
   scope: "parent",
   float: true,
   [
+    #line(length: 100%)
+    #v(0.5em)
     #text(1.4em, weight: "bold")[
       A comparative analysis of Von-Heijne, SVM and Perceptron Models for the detecton of Signal Peptides.
+
     ]
+    #v(0.25em)
+    #text(1.2em)[Fabrizio Guidotti#super("1")]
+
+    // Affiliation
+    #v(0.25em)
+    #text(1em)[#super("1")Department of Pharmacy and Biotechnology, University of Bologna, Italy]
+
     #v(0.5em)
-    #text(0.9em)[Fabrizio Guidotti]
+    #text(weight: "bold")[Abstract:] #linebreak()
+    #text(weight: "bold")[Motivation:] Signal peptides enable proteins to enter the secretory pathway. Given their importance and the high cost of in-vivo assays, accurate in-silico SP detection models have taken on an important role in bioinformatics. #linebreak()
+    #text(weight: "bold")[Results:] With this paper, we provide two models for the detection of Signal Peptides from sequence information. The first model, based on the Von-Heijne algorithm, produces a relatively accurate model, with an MCC of $0.66$. The second model is based on Support Vector Machines and achieves an higher MCC of $0.86$ and $f_1$ score of $0.87$, supporting an overall stronger model. Given the complexity of the full SVM model, we also trained a reduced model, which trades some performance (MCC of $0.73$, and $f_1$ of $0.76$), for a significantly lower number of features necessary, lowering the amount of preprocessing needed and the overall complexity of the final model.
+
+    #v(0.5em)
+    #line(length: 100%)
   ],
 )
-
-= Abstract
-#text(weight: "bold")[Motivation:] Signal peptides enable proteins to enter the secretory pathway. Given their importance and the high cost of in-vivo assays, accurate in-silico SP detection models have taken on an important role in bioinformatics.
-
-#text(weight: "bold")[Results:] With this paper, we provide two models for the detection of Signal Peptides from sequence information. The first model, based on the Von-Heijne algorithm, produces a relatively accurate model, with an MCC of $0.66$. The second model is based on Support Vector Machines and achieves an higher MCC of $0.86$ and $f_1$ score of $0.87$, supporting an overall stronger model. Given the complexity of the full SVM model, we also trained a reduced model, which trades some performance (MCC of $0.73$, and $f_1$ of $0.76$), for a significantly lower number of features necessary, lowering the amount of preprocessing needed and the overall complexity of the final model.
 
 = Introduction
 For a protein to enter the secretory pathway, in both eukaryotic and prokaryotic cells, it must be endowed with a specific target signal. Often, this signal takes the shape of a short sequences located at the N-terminus of proteins @von_Heijne_1990. The signal peptide (SP) has a distinct three-domain structure, depicted in @sp_structure, with a positively charged N-terminal region (n-region), a central hydrophobic region (H-region) and a more polar C-terminal region (C-region) containing the cleavage site @von_Heijne_1990. Given their importance in many aspects of cell biology, the accurate detection of SPs is a crucial task in bioinformatics, which has been tackled before with a variety of approaches, including machine learning (SVMs @Nugent_Jones_2009, @Petersen_Brunak_von_Heijne_Nielsen_2011 and Bayesian networks @Reynolds_Käll_Riffle_Bilmes_Noble_2008, Hidden Markov Models @Käll_Krogh_Sonnhammer_2004), and, more recently, deep learning @Savojardo_Martelli_Fariselli_Casadio_2018.
