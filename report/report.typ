@@ -21,7 +21,7 @@
   [
     #line(length: 100%)
     #v(0.5em)
-    #text(1.4em, weight: "bold")[
+    #text(1.6em, weight: "bold")[
       A comparative analysis of Von-Heijne, SVM and Perceptron Models for the detecton of Signal Peptides.
 
     ]
@@ -35,7 +35,8 @@
     #v(0.5em)
     #text(weight: "bold")[Abstract:] #linebreak()
     #text(weight: "bold")[Motivation:] Signal peptides enable proteins to enter the secretory pathway. Given their importance and the high cost of in-vivo assays, accurate in-silico SP detection models have taken on an important role in bioinformatics. #linebreak()
-    #text(weight: "bold")[Results:] With this paper, we provide two models for the detection of Signal Peptides from sequence information. The first model, based on the Von-Heijne algorithm, produces a relatively accurate model, with an MCC of $0.66$. The second model is based on Support Vector Machines and achieves an higher MCC of $0.86$ and $f_1$ score of $0.87$, supporting an overall stronger model. Given the complexity of the full SVM model, we also trained a reduced model, which trades some performance (MCC of $0.73$, and $f_1$ of $0.76$), for a significantly lower number of features necessary, lowering the amount of preprocessing needed and the overall complexity of the final model.
+    #text(weight: "bold")[Results:] With this paper, we provide two models for the detection of Signal Peptides from sequence information. The first model, based on the Von-Heijne algorithm, produces a relatively accurate model, with an MCC of $0.66$. The second model is based on Support Vector Machines and achieves an higher MCC of $0.86$ and $f_1$ score of $0.87$, supporting an overall stronger model. Given the complexity of the full SVM model, we also trained a reduced model, which trades some performance (MCC of $0.73$, and $f_1$ of $0.76$), for a significantly lower number of features necessary, lowering the amount of preprocessing needed and the overall complexity of the final model.#linebreak()
+    #text(weight: "bold")[Code Availability]: The full source code for this paper is available at #link("https://github.com/FabrizioG202/lab2").
 
     #v(0.5em)
     #line(length: 100%)
@@ -47,7 +48,7 @@ For a protein to enter the secretory pathway, in both eukaryotic and prokaryotic
 
 #figure(
   image(".imgs/sp_structure.png"),
-  caption: [Signal peptide structure],
+  caption: [Signal peptide structure, adapted from @von_Heijne_1990],
 ) <sp_structure>
 
 
@@ -56,23 +57,27 @@ With this work, we propose a comparative analysis of two different approaches fo
 
 = Materials and Methods
 == Data Collection
-Reviewed non-fragment protein sequences from the eukaryota taxa were queried from UniprotKB, and collected into 2 distinct sets, positive and negative.
+Reviewed non-fragment protein sequences from the eukaryota taxa were queried from UniprotKB @UniProt_Consortium_2018, and collected into 2 distinct sets, positive and negative.
 For Positive sequences, we selected sequences having experimental evidence for the presence of a signal peptide (`ft_signal_exp:*`)
 For the negative set, proteins not annotated with a signal peptide and endowed with experimental evidence for subcellular localization in non-secretory comparments, namely nucleus (`cc_scl_term_exp:SL-0191`), peroxisome (`cc_scl_term_exp:SL-0204`), cell membrane / plasma membrane (`cc_scl_term_exp:SL-0039`), cytosol (`cc_scl_term_exp:SL-0091`), plastid (`cc_scl_term_exp:SL-0209`) or mitochondrion (`cc_scl_term_exp:SL-0173`). For sequences in the negative set, we gathered information about the presence of a transmembrane (TM) helix, whose  hydrophobicity profile mimicks the one of a signal peptide.
 
 Further selection on the positive entries was carried out in order to select proteins which had informaton about the cleavage site and a Signal Peptide with a length of at least 14bp.
 
-To perform an initial screening for possible differences between the two sets, we plotted the distribution of sequence lengths in the positive and negative datasets (@length-distribution), which showed similar trends. To ensure equal distribution among the kindoms, the composition of each set was considered (@kingdom-distribution). The distribution of cleavage-site positions, corresponding to the length of the cleaved N-terminal region in positive sequences, is shown in @cleaved-region-length-distribution. The distribution was used to quickly scan for outliers and to crudely confirm the biological plausibility of the information.
+To perform an initial screening for possible differences between the two sets, we plotted the distribution of sequence lengths in the positive and negative datasets (@length-distribution), which showed similar trends.
 
 #figure(
   image(".imgs/length_distribution.svg"),
   caption: [Length distribution of positive and negative sequences],
 ) <length-distribution>
 
+To ensure equal distribution among the kindoms, the composition of each set was considered (@kingdom-distribution).
+
 #figure(
   image(".imgs/kingdom_distribution.svg"),
   caption: [Kingdom distribution of positive and negative datasets],
 ) <kingdom-distribution>
+
+The distribution of cleavage-site positions, corresponding to the length of the cleaved N-terminal region in positive sequences, is shown in @cleaved-region-length-distribution. The distribution was used to quickly scan for outliers and to crudely confirm the biological plausibility of the information.
 
 #figure(
   image(".imgs/cleaved_region_length_distribution.svg"),
@@ -123,7 +128,7 @@ The optimal threshold for the dataset was computed using 5-fold cross validation
 == Feature Extraction
 To build a model that can deal with sequences, they must be encoded into numerical representation. There are many possibility of extracting meaningful numerical features from a sequence, for the SVM and MLP model, we employed 2 kinds of features:
 - Aminoacid composition up to a cutoff $k$ (`n_term_composition`) and from $k$ to an hardcoded limit $N$ (set to $90$) (`c_term_composition`)
-- Protein Scales computed on the first $N$ aminoacids with a window size of $5$ (@feature-example). An Hydrophobicity scale (cit), alpha-helix tendency scale (cit), transmembrane tendency (cit), bulkiness (cit), and polarity (cit) were used.
+- Protein Scales computed on the first $N$ aminoacids with a window size of $5$ (@feature-example). An Hydrophobicity scale (@Kyte_Doolittle_1982), alpha-helix tendency scale (@Chou_Fasman_1978), transmembrane tendency (@Zhao_London_2009), bulkiness (@Zimmerman_Eliezer_Simha_1968), and polarity (@Zimmerman_Eliezer_Simha_1968) were used.
 
 For this experiment, $k$ was chosen to be the average position of the cut site, roughly 22 aminoacids from the N-Terminus.
 
@@ -251,6 +256,11 @@ A model was selected using the same method used to select the full model, includ
   image(".imgs/svm_confusion_matrix.svg"),
   caption: [Confusion matrix for the SVM model],
 ) <svm-confusion-matrix>
+
+
+= Code Availability
+The code used for this analysis is available at: #link("https://github.com/FabrizioG202/lab2")
+
 
 
 #bibliography("bib.bib")

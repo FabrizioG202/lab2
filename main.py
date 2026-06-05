@@ -281,19 +281,38 @@ X_reduced_train, X_reduced_test, y_reduced_train, y_reduced_test = (
     )
 )
 
-reduced_best_model, _ = find_model_by_cv(
-    X_reduced_train,
-    y_reduced_train,
-)
-_ = reduced_best_model.fit(X_reduced_train, y_reduced_train)  # ty:ignore[unresolved-attribute]
+# To run the optimizing process again, uncomment the lines below
+# reduced_best_model, _ = src.methods.model_selection.find_model_by_cv(
+#     X_reduced_train,
+#     y_reduced_train,
+#     src.methods.svm.get_svm_models(),
+# )
 
+# This is the model we found to be the best after running the optimization process on the reduced feature set,
+reduced_best_model = sklearn.pipeline.Pipeline(
+    [
+        ("scaler", sklearn.preprocessing.StandardScaler()),
+        ("svm", sklearn.svm.SVC(kernel="rbf", C=2, gamma=0.1, random_state=42)),
+    ]
+)
+
+# fit the model on the reduced training set
+_ = reduced_best_model.fit(X_reduced_train, y_reduced_train)
+
+# compute and save the confusion matrix for the best model on the reduced feature set on the test set as an image
 reduced_svm_confusion_matrix = src.graphics.ConfusionMatirx(
     sklearn.metrics.confusion_matrix(
         y_reduced_test,
-        reduced_best_model.predict(X_reduced_test),  # ty:ignore[unresolved-attribute]
+        reduced_best_model.predict(X_reduced_test),
     )
 )
+
 print(reduced_svm_confusion_matrix.describe())
+
 reduced_svm_confusion_matrix.plot().write_image(
     "report/.imgs/reduced_svm_confusion_matrix.svg"
 )
+
+import ankh
+
+model, tokenizer = ankh.load_large_model()
