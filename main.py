@@ -35,6 +35,8 @@ import src.feature_importance; importlib.reload(src.feature_importance); clear_o
 # collect data
 all_positive, all_negative, positive, negative = src.data_collection.collect_data()
 
+# save the distributions of the lengths of the sequences
+# to check for sistematic differences between the two sets
 src.data_collection.plot_lengths(
     positive,
     negative,
@@ -280,7 +282,7 @@ print(random_forest_importance.head(5))
 random_forest_confusion_matrix = src.graphics.ConfusionMatirx(
     sklearn.metrics.confusion_matrix(
         y_test,
-        random_forest_model.predict(X_test),
+        random_forest_model.predict(X_test),  # ty:ignore[unresolved-attribute]
     )
 )
 
