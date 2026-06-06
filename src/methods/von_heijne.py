@@ -1,5 +1,6 @@
 import itertools
 from dataclasses import dataclass
+from this import s
 from typing import Iterator, Union
 
 import numpy as np
@@ -31,10 +32,12 @@ class _FoldValidationMetric:
 class PSWM:
     data: np.ndarray
     alphabet: list[str]
+    threshold: Union[float, None]
 
     def __init__(self, data: np.ndarray, alphabet: list[str]):
         self.data = data
         self.alphabet = alphabet
+        self.threshold = None
 
     # Compute the pswm for a given list of motifs
     @staticmethod
@@ -155,7 +158,23 @@ class PSWM:
                 )
             )
 
-        return np.mean([h.optimal_threshold for h in history]), history
+        threshold = np.mean([h.optimal_threshold for h in history])
+
+        self.threshold = threshold
+
+        return threshold, history
+
+    # classifies the given seuqences, returns labels
+    def classify(self, sequences: list[str]) -> list[int]:
+        if self.threshold is None:
+            raise ValueError(
+                "Threshold not set. Please run compute_optimal_threshold first."
+            )
+
+        return [
+            int(np.max(self.get_scores(seq[:90])) >= self.threshold)
+            for seq in sequences
+        ]
 
 
 @dataclass

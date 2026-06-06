@@ -33,6 +33,7 @@ import src.methods.model_selection; importlib.reload(src.methods.model_selection
 import src.methods.von_heijne; importlib.reload(src.methods.von_heijne); clear_output()  # noqa: E703, E702, E402 # fmt: skip
 import src.feature_extraction; importlib.reload(src.feature_extraction); clear_output()  # noqa: E703, E702, E402 # fmt: skip
 import src.feature_importance; importlib.reload(src.feature_importance); clear_output()  # noqa: E703, E702, E402 # fmt: skip
+from scipy.stats import fisher_exact
 
 # collect data
 all_positive, all_negative, positive, negative = src.data_collection.collect_data()
@@ -97,9 +98,9 @@ combined = pl.concat(
 
 # This function creates, trains, and evaluates the von heijne model
 # and returns the position-specific weight matrix and the confusion matrix for the model.
+combined_train, combined_test = src.processing.split_df(combined, fraction=0.8, seed=42)
 pswm, von_heijne_confusion_matrix = src.methods.von_heijne.compute_pswm(
-    # 80% training split.
-    *src.processing.split_df(combined, fraction=0.8, seed=42)
+    combined_train, combined_test
 )
 
 # describe the confusion matrix for the von heijne model
@@ -109,6 +110,59 @@ print(von_heijne_confusion_matrix.describe())
 von_heijne_confusion_matrix.plot().write_image(
     "report/.imgs/von_heijne_confusion_matrix.svg"
 )
+
+# analyze the false positive and false negative
+false_positives = combined_test.filter(
+    (pl.col("label") == 0)
+    & (
+        pl.col("sequence").map_elements(
+            lambda seq: pswm.classify([seq])[0] == 1, return_dtype=pl.Boolean
+        )
+    )
+)
+
+# count how many of the false positives have a transmembrane domain
+print(
+    f"Number of false positives with a transmembrane domain: {false_positives.filter(pl.col('has_transmembrane') == 1).height}"
+)
+
+# table:
+# [[FP with TM, FP without TM],
+#  [TN with TM, not TN without TM]]
+table = [
+    [
+        false_positives.filter(pl.col("has_transmembrane") == 1).height,
+        false_positives.filter(pl.col("has_transmembrane") == 0).height,
+    ],
+    [
+        combined_test.filter(
+            (pl.col("label") == 0) & (pl.col("has_transmembrane") == 1)
+        ).height,
+        combined_test.filter(
+            (pl.col("label") == 0) & (pl.col("has_transmembrane") == 0)
+        ).height,
+    ],
+]
+
+
+# 
+oddsratio, p_value = fisher_exact(table, alternative="greater")
+print(f"Fisher's exact test result: odds ratio = {oddsratio}, pvalue = {p_value}")
+
+
+false_negatives = combined_test.filter(
+    (pl.col("label") == 1)
+    & (
+        pl.col("sequence").map_elements(
+            lambda seq: pswm.classify([seq])[0] == 0, return_dtype=pl.Boolean
+        )
+    )
+)
+
+
+# these were only used for pswm, we dont need them anymore.
+del combined_train, combined_test
+
 
 # ███████╗ ██╗   ██╗ ███╗   ███╗
 # ██╔════╝ ██║   ██║ ████╗ ████║

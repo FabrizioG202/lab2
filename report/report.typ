@@ -182,7 +182,7 @@ Where $T P$ (True Positives), $T N$ (True Negatives), $F P$ (False Positives), a
 
 = Results
 == SP Motifs
-From all SP-Endowed sequences, a motif logo (@sp_motif) was generated using the context around the cleavage site (13 aa upstream to 2 aa downstream). The motif shows
+From all SP-Endowed sequences, a motif logo (@sp_motif) was generated using the context around the cleavage site (13 aa upstream to 2 aa downstream). The motif shows the predominance of small and neutral residues, such as Alanine, in positions -1 and -3, which has already been noted in previous literature @von_Heijne_1983. Moreover, the high frequency of hydrophobic residues (Leucine, Valine, Phenylalanine) is consistent with the structure of SPs presented above, particularly the H-Region.
 
 #place(top + center, scope: "parent", float: true, [#figure(
     image(".imgs/positive_logo.svg"),
@@ -194,10 +194,15 @@ From all SP-Endowed sequences, a motif logo (@sp_motif) was generated using the 
 
 For the Von-Hejne model the computed optimal threshold was $9.25$, confusion matrix computed on the test set is reported in @vh-confusion-matrix. The model achieved an accuracy of $0.9378$, precision of $0.7474$, recall of $0.6532$, $f_1$ score of $0.6971$, and MCC of $0.6645$. The model thus reaches an high accuracy, but performance on the positive class is limited, detecting only around 65% of actual positives.
 
+
+
 #figure(
   image(".imgs/von_heijne_confusion_matrix.svg"),
   caption: [Confusion matrix for the Von-Heijne model],
 ) <vh-confusion-matrix>
+
+=== Analysis of False Positives
+We analysed the set of false Positives (wrongly classified as having a Signal Peptide) of the von-heijne method and as expected, we found it to be significantly enriched (Fisher's exact test, one-sided, $"OR" = 6.45$, $"p-value"=9.45 times 10^{-11}$) for proteins having a TM helix. This is likely due to the fact that the hydrophobicity profile of a TM helix mimicks the one of a SP.
 
 == Support Vector Machine
 The model, as chosen in the hyperparameter tuning phase, is a SVM with RBF kernel, $C=2$ and $gamma=0.01$. The confusion matrix computed on the test set is reported in @svm-confusion-matrix. The model achieved an accuracy of $0.9743$, precision of $0.9034$, recall of $0.8539$, $f_1$ score of $0.8779$, and MCC of $0.8640$. The SVM model thus outperforms the Von-Heijne model across all metrics, showing particularly strong improvement in recall (85.39% vs 65.32%), indicating better detection of signal peptides. This means that the SVM model is both more reliable when predicting positives and much better at detecring actual positive cases. It is worth noting that this increase in performance mirrors a great increase in complexity of the underlying method, which is structurally more complex than a simple PSWM, and also requires far greater preprocessing to compute the features. To mitigate this, we tried producing a reduced model, using only the top 5 features selected using permutation importance.
@@ -206,8 +211,6 @@ The model, as chosen in the hyperparameter tuning phase, is a SVM with RBF kerne
   image(".imgs/svm_confusion_matrix.svg"),
   caption: [Confusion matrix for the SVM model],
 ) <svm-confusion-matrix>
-
-
 
 
 === Feature Importance <feature-importance>
@@ -268,7 +271,7 @@ Additionally, we trained a simple Multi-layer Perceptron with an hidden layer of
   caption: [Confusion matrix for the MLP model],
 ) <mlp-confusion-matrix>
 
-= Discussion
+= Conclusion
 The results show the existence of a clear trade-off between simplicity and performance. The Von-Hejne predictor, despite its interpretability and simplicity, reaches an acceptable accuracy, but is plagued by a limited recall, meaning it fails at recognizing a significant portion of actual positives. Both models based on Support Vector Machines display an increased overall performance, with the full model reaching an $f_1$ score of $0.8779$, and the reduced model reaching an $f_1$ score of $0.7640$. This performance increase is likely due to the richer nature of the input features, which nicely describe physicochemical features that sequence information alone fails to capture. The reduced model, while showing a decrease in performance compared to the full model, still outperforms the Von-Heijne model, while using only 7 features instead of the full feature set, which makes it a good candidate for applications where computational resources are limited.
 
 The extremely high accuracy of the MLP model suggests how the use of Protein Language models can capture high-complexity relationships spanning the whole input sequence, which cannot be encoded by hand-crafted features.
