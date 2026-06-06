@@ -48,7 +48,7 @@
 For a protein to enter the secretory pathway, in both eukaryotic and prokaryotic cells, it must be endowed with a specific target signal. Often, this signal takes the shape of a short sequences located at the N-terminus of proteins @von_Heijne_1990. The signal peptide (SP) has a distinct three-domain structure, depicted in @sp_structure, with a positively charged N-terminal region (n-region), a central hydrophobic region (H-region) and a more polar C-terminal region (C-region) containing the cleavage site @von_Heijne_1990. Given their importance in many aspects of cell biology, the accurate detection of SPs is a crucial task in bioinformatics, which has been tackled before with a variety of approaches, including machine learning (SVMs @Nugent_Jones_2009, @Petersen_Brunak_von_Heijne_Nielsen_2011 and Bayesian networks @Reynolds_Käll_Riffle_Bilmes_Noble_2008, Hidden Markov Models @Käll_Krogh_Sonnhammer_2004), and, more recently, deep learning @Savojardo_Martelli_Fariselli_Casadio_2018.
 
 #figure(
-  image(".imgs/sp_structure.png"),
+  image(".imgs/sp_structure.svg"),
   caption: [Signal peptide structure, adapted from @von_Heijne_1990],
 ) <sp_structure>
 
