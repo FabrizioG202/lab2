@@ -1,9 +1,12 @@
 import ankh
 import numpy as np
 import torch
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
 from tqdm import tqdm
 
 import src.data_collection
+import src.graphics
 
 # collect data
 all_positive, all_negative, positive, negative = src.data_collection.collect_data()
@@ -12,6 +15,7 @@ model, tokenizer = ankh.load_base_model()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device
 
+# move to cuda
 model = model.to(device)  # ty:ignore[invalid-argument-type]
 
 
@@ -69,9 +73,7 @@ for i in tqdm(range(0, len(negative_sequences), 16)):
     negative_embeddings.extend(batch_embeddings)
 
 # now, train an mlp on the embeddings to predict the label (positive or negative)
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.neural_network import MLPClassifier
+
 
 # convert the list of embeddings to a numpy array
 positive_embeddings = np.array(positive_embeddings)
@@ -95,9 +97,16 @@ mlp = MLPClassifier(hidden_layer_sizes=(100,), max_iter=1000, random_state=42)
 mlp = mlp.fit(X_train, y_train)
 
 # create a cnfusion matrix
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-import matplotlib.pyplot as plt
-y_pred = mlp.predict(X_test)
-cm = confusion_matrix(y_test, y_pred)
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=mlp.classes_)
-disp.plot()
+# from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+
+cm = src.graphics.ConfusionMatrix.from_values(
+    y_test,
+    mlp.predict(X_test),
+)
+
+# Describe the confusion matrix metrics
+print(cm.describe())
+
+# save the confusion matrix plot
+cm.plot().write_image("./report/.imgs/mlp_confusion_matrix.svg")

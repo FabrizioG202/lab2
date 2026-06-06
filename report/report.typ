@@ -201,9 +201,11 @@ For the Von-Hejne model the computed optimal threshold was $9.25$, confusion mat
 The model, as chosen in the hyperparameter tuning phase, is a SVM with RBF kernel, $C=2$ and $gamma=0.01$. The confusion matrix computed on the test set is reported in @svm-confusion-matrix. The model achieved an accuracy of $0.9743$, precision of $0.9034$, recall of $0.8539$, $f_1$ score of $0.8779$, and MCC of $0.8640$. The SVM model thus outperforms the Von-Heijne model across all metrics, showing particularly strong improvement in recall (85.39% vs 65.32%), indicating better detection of signal peptides. This means that the SVM model is both more reliable when predicting positives and much better at detecring actual positive cases. It is worth noting that this increase in performance mirrors a great increase in complexity of the underlying method, which is structurally more complex than a simple PSWM, and also requires far greater preprocessing to compute the features. To mitigate this, we tried producing a reduced model, using only the top 5 features selected using permutation importance.
 
 #figure(
-  image(".imgs/reduced_svm_confusion_matrix.svg"),
-  caption: [Confusion matrix for the reduced SVM model],
-) <reduced-svm-confusion-matrix>
+  image(".imgs/svm_confusion_matrix.svg"),
+  caption: [Confusion matrix for the SVM model],
+) <svm-confusion-matrix>
+
+
 
 
 === Feature Importance <feature-importance>
@@ -240,7 +242,7 @@ The top 5 features identified by each method are shown in @permutation-importanc
 )<rf-importance>
 
 === Reduced SVM Model
-We then trained a reduced model, using the combination of 5 most important features found by each method. The chosen features were:
+We then trained a reduced model, using the combination of the 5 most important features found by each method. The 7 chosen features were:
 - `kd_max`: Maximum hydrophobicity value
 - `kd_max_pos`: Position of maximum hydrophobicity
 - `n_terminal_comp_A`: Alanine composition in the N-terminal region
@@ -249,14 +251,20 @@ We then trained a reduced model, using the combination of 5 most important featu
 - `tm_max`: Maximum transmembrane tendency
 - `tm_max_pos`: Position of maximum transmembrane tendency
 
-A model was selected using the same method used to select the full model, including the same pool of possible classificators. The reduced model achieved an accuracy of $0.9521$, precision of $0.8177$, recall of $0.7169$, $f_1$ score of $0.7640$, and MCC of $0.7394$. The confusion matrix computed on the test set is reported in @reduced-svm-confusion-matrix. While this represents a decrease in performance compared to the full SVM model ($f_1$ score of 0.8779 vs 0.7640), the reduced model still outperforms the Von-Heijne model ($f_1$ score of 0.6971) while using only 7 features instead of the full feature set.
-
+The architecture for the reduced model was selected using the same method used for the full model, including the same pool of possible classificators. The reduced model achieved an accuracy of $0.9521$, precision of $0.8177$, recall of $0.7169$, $f_1$ score of $0.7640$, and MCC of $0.7394$. The confusion matrix computed on the test set is reported in @reduced-svm-confusion-matrix. While this represents a decrease in performance compared to the full SVM model ($f_1$ score of 0.8779 vs 0.7640), the reduced model still outperforms the Von-Heijne model ($f_1$ score of 0.6971) while using only 7 features instead of the full feature set.
 
 #figure(
-  image(".imgs/svm_confusion_matrix.svg"),
-  caption: [Confusion matrix for the SVM model],
-) <svm-confusion-matrix>
+  image(".imgs/reduced_svm_confusion_matrix.svg"),
+  caption: [Confusion matrix for the reduced SVM model],
+) <reduced-svm-confusion-matrix>
 
+= MLP-based classificator
+Additionally, we trained a simple Multi-layer Perceptron with an hidden layer of 100 neurons on sequence embeddings computed on the first 90aa of the sequences using the Ankh Protein Language Model (PLM) @elnaggar2023ankh. The model size chosen was the base one, which despite its limited size, achieves performance similar or surpassing those of larger models, such as ESM and ESM2 @rives2019biological @lin2022language. The generated embeddings have a  dimension of $768$. The MLP model achieved exceptional performance with an accuracy of $0.9926$, precision of $0.9766$, recall of $0.9543$, $f_1$ score of $0.9654$, and MCC of $0.9613$. The confusion matrix is reported in @mlp-confusion-matrix. This model is the most powerful among the ones presented in this work. However, it is by far the most complex, both for the classifier and for the preprocessing step, where the embeddings are computed, requiring extensive computational capacity. This model is thus not directly comparable to the others, but it is worth noting that the use of PLM embeddings allows it to capture complex sequence patterns and relationships that may be difficult to capture with traditional feature engineering approaches, which likely contributes to its superior performance.
+
+#figure(
+  image(".imgs/mlp_confusion_matrix.svg"),
+  caption: [Confusion matrix for the MLP model],
+) <mlp-confusion-matrix>
 
 = Code Availability
 The code used for this analysis is available at: #link("https://github.com/FabrizioG202/lab2")

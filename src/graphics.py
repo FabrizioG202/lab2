@@ -8,6 +8,13 @@ class ConfusionMatrix:
     def __init__(self, confusion_matrix: np.ndarray):
         self.confusion_matrix = confusion_matrix
 
+    @staticmethod
+    def from_values(y_true: np.ndarray, y_pred: np.ndarray) -> "ConfusionMatrix":
+        from sklearn.metrics import confusion_matrix
+
+        cm = confusion_matrix(y_true, y_pred)
+        return ConfusionMatrix(cm)
+
     @property
     def accuracy(self) -> float:
         tn, fp, fn, tp = self.confusion_matrix.ravel()
