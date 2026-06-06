@@ -292,7 +292,7 @@ class DataCollector:
             )
 
 
-def plot_lengths(
+def _plot_lengths(
     positive: pl.DataFrame,
     negative: pl.DataFrame,
 ) -> go.Figure:
@@ -325,7 +325,6 @@ def plot_lengths(
     )
 
     fig.update_layout(
-        # title="Sequence Length Distribution",
         xaxis_title="Sequence length",
         yaxis_title="Normalized count",
         barmode="overlay",
@@ -335,7 +334,7 @@ def plot_lengths(
     return fig
 
 
-def plot_kingdom_distribution(
+def _plot_kingdom_distribution(
     positive: pl.DataFrame,
     negative: pl.DataFrame,
 ) -> go.Figure:
@@ -370,7 +369,6 @@ def plot_kingdom_distribution(
         )
 
     fig.update_layout(
-        # title="Kingdom distribution of positive and negative datasets",
         grid=dict(rows=1, columns=2),
         annotations=[
             dict(text="Positive", x=0.20, y=1.08, showarrow=False),
@@ -381,7 +379,7 @@ def plot_kingdom_distribution(
     return fig
 
 
-def plot_cleaved_region_lengths(positive: pl.DataFrame) -> go.Figure:
+def _plot_cleaved_region_lengths(positive: pl.DataFrame) -> go.Figure:
     cleavage_lengths = positive["cleavage_site"].to_list()
     average_cleavage_length = float(np.mean(cleavage_lengths))
 
@@ -405,7 +403,6 @@ def plot_cleaved_region_lengths(positive: pl.DataFrame) -> go.Figure:
     )
 
     fig.update_layout(
-        # title="Length distribution of the cleaved region",
         xaxis_title="Cleaved region length",
         yaxis_title="Count",
         showlegend=False,
@@ -477,3 +474,26 @@ def collect_data(
     negative = all_negative.filter(pl.col("accession") == pl.col("cluster_id"))
 
     return all_positive, all_negative, positive, negative
+
+
+def save_exploration_plots(positive: pl.DataFrame, negative: pl.DataFrame) -> None:
+
+    # save the distributions of the lengths of the sequences
+    # to check for sistematic differences between the two sets
+    _plot_lengths(
+        positive,
+        negative,
+    ).write_image("report/.imgs/length_distribution.svg")
+
+    # Plot the distribution of the kingdoms in the positive and negative sets to check for
+    # systematic differences between the two sets
+    _plot_kingdom_distribution(
+        positive,
+        negative,
+    ).write_image("report/.imgs/kingdom_distribution.svg")
+
+    # Plot the distribution of the lengths of the cleaved regions in the positive
+    # set to check for biological plausibility of the data
+    _plot_cleaved_region_lengths(
+        positive,
+    ).write_image("report/.imgs/cleaved_region_length_distribution.svg")

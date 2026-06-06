@@ -123,7 +123,7 @@ $
   )
 $
 
-The optimal threshold for the dataset was computed using 5-fold cross validation. For each fold, the data was split into validation and test sets. On the validation set, we computed precision and recall values across all possible threshold values, then selected the threshold that maximized the F1 score (see @evaluation-and-comparison). This optimal threshold was then evaluated on the corresponding test set to compute performance metrics. The final threshold reported is the average of the optimal thresholds across all 5 folds.
+The optimal threshold for the dataset was computed using 5-fold cross validation. For each fold, the data was split into validation and test sets. On the validation set, we computed precision and recall values across all possible threshold values, then selected the threshold that maximized the $f_1$ score (see @evaluation-and-comparison). This optimal threshold was then evaluated on the corresponding test set to compute performance metrics. The final threshold reported is the average of the optimal thresholds across all 5 folds.
 
 == Feature Extraction
 To build a model that can deal with sequences, they must be encoded into numerical representation. There are many possibility of extracting meaningful numerical features from a sequence, for the SVM and MLP model, we employed 2 kinds of features:
@@ -145,7 +145,7 @@ $
 
 The $gamma$ parameter defines how much influence a single training example has. A low $gamma$ value means that the influence of a single training example is far-reaching, while a high $gamma$ value means that the influence is limited to close neighbors. For both linear and RBF kernels, the $C$ parameter controls the trade-off between maximizing the margin and minimizing the classification error, with low C values leading to a widwe margin and a simpler model, and high C values leading to a narrower margin, with few training errors but a more complex model.
 
-We used a grid search to find optimal hyperparameters, testing both RBF and linear kernels. For the RBF kernel, we evaluated C values of 0.1, 1, 2, 4, and 8, combined with gamma values of "scale", 0.001, 0.01, 0.1, 1, and 2. For the linear kernel, we tested C values of 0.1, 1, 2, 4, and 8. Each model was tested on a and evaluated on an 80\% training split. The model yielding the highest f1 score was found to have a `rbf` kernel, with $C=2$ and $gamma=0.01$, with a mean f1 score across the 5 folds ran on the training set of $0.87$.
+We used a grid search to find optimal hyperparameters, testing both RBF and linear kernels. For the RBF kernel, we evaluated C values of 0.1, 1, 2, 4, and 8, combined with gamma values of "scale", 0.001, 0.01, 0.1, 1, and 2. For the linear kernel, we tested C values of 0.1, 1, 2, 4, and 8. Each model was tested on a and evaluated on an 80\% training split. The model yielding the highest $f_1$ score was found to have a `rbf` kernel, with $C=2$ and $gamma=0.01$, with a mean $f_1$ score across the 5 folds ran on the training set of $0.87$.
 
 == Evaluation and comparison <evaluation-and-comparison>
 Rather than relying on accuracy alone, since the dataset is greatly imbalanced, to evaluate and compare the performance of the models, we computed several metrics on the test set. The metrics were calculated based on the following formulas:
@@ -165,7 +165,7 @@ $
   "Recall" = (T P) / (T P + F N)
 $
 
-*F1 Score:* The harmonic mean of precision and recall.
+*$f_1$ Score:* The harmonic mean of precision and recall.
 $
   #text(size: 8pt)[$F_1 = 2 dot (("Precision" dot "Recall")) / ("Precision" + "Recall") = (2 T P) / (2 T P + F P + F N)$]
 $
@@ -180,7 +180,7 @@ Where $T P$ (True Positives), $T N$ (True Negatives), $F P$ (False Positives), a
 
 = Results
 == SP Motifs
-From all SP-Endowed sequences, a motif logo (@sp_motif) was generated using the context around the cleavage site (13 aa upstream to 2 aa downstream) .
+From all SP-Endowed sequences, a motif logo (@sp_motif) was generated using the context around the cleavage site (13 aa upstream to 2 aa downstream). The motif shows
 
 #place(top + center, scope: "parent", float: true, [#figure(
     image(".imgs/positive_logo.svg"),
@@ -190,7 +190,7 @@ From all SP-Endowed sequences, a motif logo (@sp_motif) was generated using the 
 
 == Von Heijne Model
 
-For the Von-Hejne model the computed optimal threshold was $9.25$, confusion matrix computed on the test set is reported in @vh-confusion-matrix. The model achieved an accuracy of $0.9378$, precision of $0.7474$, recall of $0.6532$, F1 score of $0.6971$, and MCC of $0.6645$. The model thus reaches an high accuracy, but performance on the positive class is limited, detecting only around 65% of actual positives.
+For the Von-Hejne model the computed optimal threshold was $9.25$, confusion matrix computed on the test set is reported in @vh-confusion-matrix. The model achieved an accuracy of $0.9378$, precision of $0.7474$, recall of $0.6532$, $f_1$ score of $0.6971$, and MCC of $0.6645$. The model thus reaches an high accuracy, but performance on the positive class is limited, detecting only around 65% of actual positives.
 
 #figure(
   image(".imgs/von_heijne_confusion_matrix.svg"),
@@ -198,7 +198,7 @@ For the Von-Hejne model the computed optimal threshold was $9.25$, confusion mat
 ) <vh-confusion-matrix>
 
 == Support Vector Machine
-The model, as chosen in the hyperparameter tuning phase, is a SVM with RBF kernel, $C=2$ and $gamma=0.01$. The confusion matrix computed on the test set is reported in @svm-confusion-matrix. The model achieved an accuracy of $0.9743$, precision of $0.9034$, recall of $0.8539$, F1 score of $0.8779$, and MCC of $0.8640$. The SVM model thus outperforms the Von-Heijne model across all metrics, showing particularly strong improvement in recall (85.39% vs 65.32%), indicating better detection of signal peptides. This means that the SVM model is both more reliable when predicting positives and much better at detecring actual positive cases. It is worth noting that this increase in performance mirrors a great increase in complexity of the underlying method, which is structurally more complex than a simple PSWM, and also requires far greater preprocessing to compute the features. To mitigate this, we tried producing a reduced model, using only the top 5 features selected using permutation importance.
+The model, as chosen in the hyperparameter tuning phase, is a SVM with RBF kernel, $C=2$ and $gamma=0.01$. The confusion matrix computed on the test set is reported in @svm-confusion-matrix. The model achieved an accuracy of $0.9743$, precision of $0.9034$, recall of $0.8539$, $f_1$ score of $0.8779$, and MCC of $0.8640$. The SVM model thus outperforms the Von-Heijne model across all metrics, showing particularly strong improvement in recall (85.39% vs 65.32%), indicating better detection of signal peptides. This means that the SVM model is both more reliable when predicting positives and much better at detecring actual positive cases. It is worth noting that this increase in performance mirrors a great increase in complexity of the underlying method, which is structurally more complex than a simple PSWM, and also requires far greater preprocessing to compute the features. To mitigate this, we tried producing a reduced model, using only the top 5 features selected using permutation importance.
 
 #figure(
   image(".imgs/reduced_svm_confusion_matrix.svg"),
@@ -207,7 +207,7 @@ The model, as chosen in the hyperparameter tuning phase, is a SVM with RBF kerne
 
 
 === Feature Importance <feature-importance>
-In order to understand which features contribute the most to the ability of our model to classify sequences, we employed two methods. As a first test, we assesed permutation importance, where values of each feature are randomly shuffled in order to break their relationship with the target label, using the drop in the classifier accuracy as a proxy for the importance of the feature. As a second test, we trained a Random Forest Classifier with $500$ classifiers and exploited the model's own feature importance, which is computed as a result of the training process. We also evaluated the performance of the resulting random forest classifier, which itself proved to be a good model, with an accuracy of $0.9580$, precision of $0.9036$, recall of $0.6849$, F1 score of $0.7792$, and MCC of $0.7654$.
+In order to understand which features contribute the most to the ability of our model to classify sequences, we employed two methods. As a first test, we assesed permutation importance, where values of each feature are randomly shuffled in order to break their relationship with the target label, using the drop in the classifier accuracy as a proxy for the importance of the feature. As a second test, we trained a Random Forest Classifier with $500$ classifiers and exploited the model's own feature importance, which is computed as a result of the training process. We also evaluated the performance of the resulting random forest classifier, which itself proved to be a good model, with an accuracy of $0.9580$, precision of $0.9036$, recall of $0.6849$, $f_1$ score of $0.7792$, and MCC of $0.7654$.
 
 The top 5 features identified by each method are shown in @permutation-importance and @rf-importance. Both methods consistently identified `n_terminal_comp_L` (leucine composition in the N-terminal region) and `tm_max` (maximum transmembrane tendency) as important features, even if with different ranks.
 
@@ -249,7 +249,7 @@ We then trained a reduced model, using the combination of 5 most important featu
 - `tm_max`: Maximum transmembrane tendency
 - `tm_max_pos`: Position of maximum transmembrane tendency
 
-A model was selected using the same method used to select the full model, including the same pool of possible classificators. The reduced model achieved an accuracy of $0.9521$, precision of $0.8177$, recall of $0.7169$, F1 score of $0.7640$, and MCC of $0.7394$. The confusion matrix computed on the test set is reported in @reduced-svm-confusion-matrix. While this represents a decrease in performance compared to the full SVM model (F1 score of 0.8779 vs 0.7640), the reduced model still outperforms the Von-Heijne model (F1 score of 0.6971) while using only 7 features instead of the full feature set.
+A model was selected using the same method used to select the full model, including the same pool of possible classificators. The reduced model achieved an accuracy of $0.9521$, precision of $0.8177$, recall of $0.7169$, $f_1$ score of $0.7640$, and MCC of $0.7394$. The confusion matrix computed on the test set is reported in @reduced-svm-confusion-matrix. While this represents a decrease in performance compared to the full SVM model ($f_1$ score of 0.8779 vs 0.7640), the reduced model still outperforms the Von-Heijne model ($f_1$ score of 0.6971) while using only 7 features instead of the full feature set.
 
 
 #figure(

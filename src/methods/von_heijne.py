@@ -7,6 +7,7 @@ import polars as pl
 import sklearn.metrics
 import tqdm
 
+import src.graphics
 import src.utils.AdditionalProtParamData
 
 
@@ -209,3 +210,37 @@ class _FoldDesc:
             and frozenset(self.testing) == frozenset(other.testing)
             and frozenset(self.validation) == frozenset(other.validation)
         )
+
+
+def compute_pswm(
+    combined_train: pl.DataFrame, combined_test: pl.DataFrame
+) -> tuple[PSWM, src.graphics.ConfusionMatrix]:
+    # Compute the PSWM on the training set, using only the positive examples
+    # with a motif (i.e. where we could extract the motif).
+    pswm = PSWM.compute_for(
+        [m for m in combined_train["motif"].to_list() if m is not None],
+        alphabet=list("GAVPLIMFWYSTCNQHDEKR"),
+    )
+
+    # Use CV to compute the optimal threshold for the PSWM scores on the training set.
+    threshold, history = pswm.compute_optimal_threshold(
+        folds=5,
+        all_sequences=combined_train.select(
+            [
+                "accession",
+                "sequence",
+                "label",
+            ]
+        ),
+    )
+
+    # Now, evaluate on the test set and compute the confusion matrix for the PSWM method and save it as an image
+    return pswm, src.graphics.ConfusionMatrix(
+        sklearn.metrics.confusion_matrix(
+            combined_test["label"].to_list(),
+            [
+                1 if max(pswm.get_scores(motif[:90])) >= threshold else 0
+                for motif in combined_test["sequence"].to_list()
+            ],
+        )
+    )

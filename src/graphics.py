@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 
 
-class ConfusionMatirx:
+class ConfusionMatrix:
     def __init__(self, confusion_matrix: np.ndarray):
         self.confusion_matrix = confusion_matrix
 
