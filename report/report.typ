@@ -52,8 +52,9 @@ For a protein to enter the secretory pathway, in both eukaryotic and prokaryotic
   caption: [Signal peptide structure, adapted from @von_Heijne_1990],
 ) <sp_structure>
 
+Protein Language models (PLMs) are an adaptation of Large Language Models (LLMs) which treat amino acid sequences as sentences. They been trained on millions of sequences and are able to learn extremely complex patterns, which can be exploited for different tasks, such as structure prediction, annotation or classification @Leclercq_Droit_2026.
 
-With this work, we propose a comparative analysis of different approaches for the detection of SPs from the sequence of a given protein. We compare performance of the Von-Heijne model, which is based on a position-specific weight matrix (PSWM) generated from the context around the cleavage site, with a Support Vector Machine (SVM) model trained on a variety of features extracted from the sequence, and a simple Multi-layer Perceptron (MLP) trained on sequence embeddings computed using a Protein Language Model (PLM).
+With this work, we propose a comparative analysis of different approaches for the detection of SPs from the sequence of a given protein. We compare performance of the Von-Heijne model, which is based on a position-specific weight matrix (PSWM) generated from the context around the cleavage site, with a Support Vector Machine (SVM) model trained on a variety of features extracted from the sequence, and a simple Multi-layer Perceptron (MLP) trained on sequence embeddings computed using a PLM.
 
 
 = Materials and Methods
@@ -266,6 +267,11 @@ Additionally, we trained a simple Multi-layer Perceptron with an hidden layer of
   image(".imgs/mlp_confusion_matrix.svg"),
   caption: [Confusion matrix for the MLP model],
 ) <mlp-confusion-matrix>
+
+= Discussion
+The results show the existence of a clear trade-off between simplicity and performance. The Von-Hejne predictor, despite its interpretability and simplicity, reaches an acceptable accuracy, but is plagued by a limited recall, meaning it fails at recognizing a significant portion of actual positives. Both models based on Support Vector Machines display an increased overall performance, with the full model reaching an $f_1$ score of $0.8779$, and the reduced model reaching an $f_1$ score of $0.7640$. This performance increase is likely due to the richer nature of the input features, which nicely describe physicochemical features that sequence information alone fails to capture. The reduced model, while showing a decrease in performance compared to the full model, still outperforms the Von-Heijne model, while using only 7 features instead of the full feature set, which makes it a good candidate for applications where computational resources are limited.
+
+The extremely high accuracy of the MLP model suggests how the use of Protein Language models can capture high-complexity relationships spanning the whole input sequence, which cannot be encoded by hand-crafted features.
 
 = Code Availability
 The code used for this analysis is available at: #link("https://github.com/FabrizioG202/lab2")
