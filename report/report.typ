@@ -35,7 +35,8 @@
     #v(0.5em)
     #text(weight: "bold")[Abstract:] #linebreak()
     #text(weight: "bold")[Motivation:] Signal peptides enable proteins to enter the secretory pathway. Given their importance and the high cost of in-vivo assays, accurate in-silico SP detection models have taken on an important role in bioinformatics. #linebreak()
-    #text(weight: "bold")[Results:] With this paper, we provide two models for the detection of Signal Peptides from sequence information. The first model, based on the Von-Heijne algorithm, produces a relatively accurate model, with an MCC of $0.66$. The second model is based on Support Vector Machines and achieves an higher MCC of $0.86$ and $f_1$ score of $0.87$, supporting an overall stronger model. Given the complexity of the full SVM model, we also trained a reduced model, which trades some performance (MCC of $0.73$, and $f_1$ of $0.76$), for a significantly lower number of features necessary, lowering the amount of preprocessing needed and the overall complexity of the final model.#linebreak()
+    #text(weight: "bold")[Results:] With this paper, we provide two models for the detection of Signal Peptides from sequence information. The first model, based on the Von-Heijne algorithm, produces a relatively accurate model, with an MCC of $0.66$. The second model is based on Support Vector Machines and achieves an higher MCC of $0.86$ and $f_1$ score of $0.87$, supporting an overall stronger model. Given the complexity of the full SVM model, we also trained a reduced model, which trades some performance (MCC of $0.73$, and $f_1$ of $0.76$), for a significantly lower number of features necessary, lowering the amount of preprocessing needed and the overall complexity of the final model. We also present a predictor based on Protein Language Models, which behaves as a near perfect classificator, with an MCC of $0.96$ and $f_1$ score of $0.96$, but is not directly comparable to the other two models, given the much higher complexity of the underlying method. #linebreak()
+    #linebreak()
     #text(weight: "bold")[Code Availability]: The full source code for this paper is available at #link("https://github.com/FabrizioG202/lab2").
 
     #v(0.5em)
@@ -52,7 +53,7 @@ For a protein to enter the secretory pathway, in both eukaryotic and prokaryotic
 ) <sp_structure>
 
 
-With this work, we propose a comparative analysis of two different approaches for the detection of SPs, namely the Von-Heijne model a Support Vector Machine (SVM) based method.
+With this work, we propose a comparative analysis of different approaches for the detection of SPs from the sequence of a given protein. We compare performance of the Von-Heijne model, which is based on a position-specific weight matrix (PSWM) generated from the context around the cleavage site, with a Support Vector Machine (SVM) model trained on a variety of features extracted from the sequence, and a simple Multi-layer Perceptron (MLP) trained on sequence embeddings computed using a Protein Language Model (PLM).
 
 
 = Materials and Methods
@@ -63,7 +64,7 @@ For the negative set, proteins not annotated with a signal peptide and endowed w
 
 Further selection on the positive entries was carried out in order to select proteins which had informaton about the cleavage site and a Signal Peptide with a length of at least 14bp.
 
-To perform an initial screening for possible differences between the two sets, we plotted the distribution of sequence lengths in the positive and negative datasets (@length-distribution), which showed similar trends.
+To perform an initial screening for possible differences between the two sets, we plotted the distribution of sequence lengths in the positive and negative datasets (@length-distribution), which showed similar trends among the two groups.
 
 #figure(
   image(".imgs/length_distribution.svg"),
@@ -259,7 +260,7 @@ The architecture for the reduced model was selected using the same method used f
 ) <reduced-svm-confusion-matrix>
 
 = MLP-based classificator
-Additionally, we trained a simple Multi-layer Perceptron with an hidden layer of 100 neurons on sequence embeddings computed on the first 90aa of the sequences using the Ankh Protein Language Model (PLM) @elnaggar2023ankh. The model size chosen was the base one, which despite its limited size, achieves performance similar or surpassing those of larger models, such as ESM and ESM2 @rives2019biological @lin2022language. The generated embeddings have a  dimension of $768$. The MLP model achieved exceptional performance with an accuracy of $0.9926$, precision of $0.9766$, recall of $0.9543$, $f_1$ score of $0.9654$, and MCC of $0.9613$. The confusion matrix is reported in @mlp-confusion-matrix. This model is the most powerful among the ones presented in this work. However, it is by far the most complex, both for the classifier and for the preprocessing step, where the embeddings are computed, requiring extensive computational capacity. This model is thus not directly comparable to the others, but it is worth noting that the use of PLM embeddings allows it to capture complex sequence patterns and relationships that may be difficult to capture with traditional feature engineering approaches, which likely contributes to its superior performance.
+Additionally, we trained a simple Multi-layer Perceptron with an hidden layer of 100 neurons on sequence embeddings computed on the first 90aa of sequence using the Ankh Protein Language Model (PLM) @elnaggar2023ankh. The model size chosen was the base one, which despite its limited size, achieves performance similar or surpassing those of larger models, such as ESM and ESM2 @rives2019biological @lin2022language. The generated embeddings have a  dimension of $768$. The MLP model achieved exceptional performance with an accuracy of $0.9926$, precision of $0.9766$, recall of $0.9543$, $f_1$ score of $0.9654$, and MCC of $0.9613$. The confusion matrix is reported in @mlp-confusion-matrix. This model is the most powerful among the ones presented in this work. However, it is by far the most complex, both for the classifier and for the preprocessing step, where the embeddings are computed, requiring extensive computational capacity. This model is thus not directly comparable to the others, but it is worth noting that the use of PLM embeddings allows it to capture complex sequence patterns and relationships that may be difficult to capture with traditional feature engineering approaches, which likely contributes to its superior performance.
 
 #figure(
   image(".imgs/mlp_confusion_matrix.svg"),
