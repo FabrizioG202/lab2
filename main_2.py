@@ -1,4 +1,5 @@
 import ankh
+import numpy as np
 import torch
 from tqdm import tqdm
 
@@ -12,10 +13,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device
 
 model = model.to(device)  # ty:ignore[invalid-argument-type]
-model.eval()
 
 
-def get_embeddings(sequences: list[str]):
+def get_embeddings(sequences: list[str]) -> list[np.ndarray]:
     tokenized_sequences = [list(seq) for seq in sequences]
 
     outputs = tokenizer(
@@ -29,12 +29,21 @@ def get_embeddings(sequences: list[str]):
     outputs = {k: v.to(device) for k, v in outputs.items()}
 
     with torch.no_grad():
-        embeddings = model(
+        model_output = model(
             input_ids=outputs["input_ids"],
             attention_mask=outputs["attention_mask"],
         )
 
-    return embeddings
+        token_embeddings = model_output.last_hidden_state
+        attention_mask = outputs["attention_mask"]
+
+        mask = attention_mask.unsqueeze(-1).float()
+
+        sequence_embeddings = (token_embeddings * mask).sum(dim=1) / mask.sum(
+            dim=1
+        ).clamp(min=1e-9)
+
+    return [emb for emb in sequence_embeddings.cpu().numpy()]
 
 
 positive_sequences = positive["sequence"].to_list()
@@ -43,7 +52,52 @@ positive_embeddings = []
 
 # loop over the positive sequences in batches of 16 and get the embeddings for each batch
 for i in tqdm(range(0, len(positive_sequences), 16)):
-    batch_sequences = [s[:90] for s in positive_sequences[i : i + 4]]
+    batch_sequences = [s[:90] for s in positive_sequences[i : i + 16]]
 
     batch_embeddings = get_embeddings(batch_sequences)
-    # positive_embeddings.append(batch_embeddings)
+    positive_embeddings.extend(batch_embeddings)
+
+
+# now get them for the negative sequences as well
+negative_sequences = negative["sequence"].to_list()
+negative_embeddings = []
+
+for i in tqdm(range(0, len(negative_sequences), 16)):
+    batch_sequences = [s[:90] for s in negative_sequences[i : i + 16]]
+
+    batch_embeddings = get_embeddings(batch_sequences)
+    negative_embeddings.extend(batch_embeddings)
+
+# now, train an mlp on the embeddings to predict the label (positive or negative)
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+
+# convert the list of embeddings to a numpy array
+positive_embeddings = np.array(positive_embeddings)
+negative_embeddings = np.array(negative_embeddings)
+
+# create the labels for the positive and negative samples
+positive_labels = np.ones(len(positive_embeddings))
+negative_labels = np.zeros(len(negative_embeddings))
+
+# concatenate the positive and negative embeddings and labels
+X = np.concatenate((positive_embeddings, negative_embeddings), axis=0)
+y = np.concatenate((positive_labels, negative_labels), axis=0)
+
+# split the data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# train an mlp on the training data
+mlp = MLPClassifier(hidden_layer_sizes=(100,), max_iter=1000, random_state=42)
+mlp = mlp.fit(X_train, y_train)
+
+# create a cnfusion matrix
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+y_pred = mlp.predict(X_test)
+cm = confusion_matrix(y_test, y_pred)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=mlp.classes_)
+disp.plot()
