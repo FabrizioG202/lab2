@@ -21,7 +21,7 @@
     #line(length: 100%)
     #v(0.5em)
     #text(1.6em, weight: "bold")[
-      A comparative analysis of Von-Heijne, SVM and Perceptron Models for the detecton of Signal Peptides.
+      A comparative analysis of Von-Heijne, SVM and PLM Models for the detecton of Signal Peptides.
 
     ]
     #v(0.25em)
